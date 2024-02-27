@@ -19,3 +19,9 @@ When me and my brother were little, we used to come up with ideas for different 
 - [ ] Figure out how the players will hit the caps visually. We can start with simply allowing players to set the force. 
 - [ ] Music! Lofi or a bit more energetic?
 - [ ] Allow players to pick avatars and make these avatars say something when they make a good move. You can use the freely available visual novel assets on itch.io. This can also just be a character that represents the game owner or something...like Toasty! from Mortal Kombat.
+
+#### References
+
+- [vobarian - 2D collision physics article](https://www.vobarian.com/collisions/2dcollisions2.pdf)
+- [pikuma - 2D collision video](https://www.youtube.com/watch?v=1L2g4ZqmFLQ)
+- [elastic/inelastic collisions](https://www.youtube.com/watch?v=9YRgHikdcqs)
