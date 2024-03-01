@@ -8,6 +8,8 @@ import (
 
 var bgColor = rl.NewColor(54, 89, 74, 255)
 
+const STONE_RADIUS = 75
+
 type stone struct {
 	pos      rl.Vector2
 	color    rl.Color
@@ -16,71 +18,84 @@ type stone struct {
 	radius   float32
 }
 
+type gameStatus = int8
+type actionEnum = int8
+
+const (
+	Uninitialized gameStatus = iota
+	Initialized   gameStatus = iota
+	Stopped       gameStatus = iota
+	// action enums
+	NoAction   actionEnum = iota
+	StoneAimed actionEnum = iota
+	StoneHit   actionEnum = iota
+)
+
+type game struct {
+	status          gameStatus
+	lastTimeUpdated float64
+	stones          []stone
+	selectedStone   *stone
+	action          actionEnum
+}
+
+func addStones(width, height float64) []stone {
+	stones := []stone{}
+
+	// left side gen
+	for h := 0.25 * height; h < height; h += 0.25 * height {
+		for w := 0.1 * width; w < 0.5*width; w += 0.2 * width {
+			s := stone{
+				pos:      rl.NewVector2(float32(w), float32(h)),
+				color:    rl.Black,
+				velocity: rl.NewVector2(0, 0),
+				mass:     1,
+				radius:   STONE_RADIUS,
+			}
+			stones = append(stones, s)
+		}
+	}
+
+	// right side gen
+	for h := 0.25 * height; h < height; h += 0.25 * height {
+		for w := 0.9 * width; w > 0.5*width; w -= 0.2 * width {
+			s := stone{
+				pos:      rl.NewVector2(float32(w), float32(h)),
+				color:    rl.White,
+				velocity: rl.NewVector2(0, 0),
+				mass:     1,
+				radius:   STONE_RADIUS,
+			}
+			stones = append(stones, s)
+		}
+	}
+
+	return stones
+}
+
 func main() {
-	lastTimeUpdated := 0.0
+	game := game{
+		status:          Uninitialized,
+		lastTimeUpdated: 0.0,
+		stones: []stone{
+			{
+				pos:      rl.NewVector2(300, 300),
+				color:    rl.Black,
+				velocity: rl.NewVector2(0, 0),
+				mass:     1,
+				radius:   STONE_RADIUS,
+			},
+		},
+		selectedStone: nil,
+		action:        NoAction,
+	}
 
-	mouseLeftStart := rl.NewVector2(0, 0)
-
-	rl.InitWindow(1000, 600, "flik")
+	// mouseLeftStart := rl.NewVector2(0, 0)
+	rl.InitWindow(0, 0, "flik")
+	rl.ToggleFullscreen()
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(60)
-
-	stones := []stone{
-		{
-			pos:      rl.NewVector2(300, 300),
-			color:    rl.Black,
-			velocity: rl.NewVector2(0, 0),
-			mass:     1,
-			radius:   15,
-		},
-
-		{
-			pos:      rl.NewVector2(680, 320),
-			color:    rl.White,
-			velocity: rl.NewVector2(0, 0),
-			mass:     1,
-			radius:   15,
-		},
-
-		{
-			pos:      rl.NewVector2(730, 280),
-			color:    rl.White,
-			velocity: rl.NewVector2(0, 0),
-			mass:     1,
-			radius:   15,
-		},
-
-		{
-			pos:      rl.NewVector2(730, 320),
-			color:    rl.White,
-			velocity: rl.NewVector2(0, 0),
-			mass:     1,
-			radius:   15,
-		},
-
-		{
-			pos:      rl.NewVector2(760, 260),
-			color:    rl.White,
-			velocity: rl.NewVector2(0, 0),
-			mass:     1,
-			radius:   15,
-		},
-		{
-			pos:      rl.NewVector2(760, 300),
-			color:    rl.White,
-			velocity: rl.NewVector2(0, 0),
-			mass:     1,
-			radius:   15,
-		},
-		{
-			pos:      rl.NewVector2(760, 340),
-			color:    rl.White,
-			velocity: rl.NewVector2(0, 0),
-			mass:     1,
-			radius:   15,
-		},
-	}
 
 	resolveCollision := func(a, b *stone) {
 		// 1. find unit normal and unit tangent
@@ -115,10 +130,6 @@ func main() {
 		vaV := rl.Vector2Add(vanpV, vatpV)
 		vbV := rl.Vector2Add(vbnpV, vbtpV)
 
-		fmt.Printf("%p\n", a)
-		fmt.Printf("%-v\n", a.velocity)
-		fmt.Printf("%-v\n---------\n", vaV)
-
 		a.velocity = vaV
 		b.velocity = vbV
 	}
@@ -150,26 +161,21 @@ func main() {
 	}
 
 	handleMouseMove := func() {
-		fmt.Printf("%-v\n", stones[0].velocity)
-		hasStopped := stones[0].velocity == rl.NewVector2(0, 0)
+		mousePos := rl.GetMousePosition()
+		hasStopped := game.selectedStone == nil || game.selectedStone.velocity == rl.NewVector2(0, 0)
 
 		if rl.IsMouseButtonDown(rl.MouseButtonRight) && hasStopped {
-			(&stones[0]).pos = rl.GetMousePosition()
+			for i, stone := range game.stones {
+				if rl.CheckCollisionPointCircle(mousePos, stone.pos, stone.radius) {
+					game.selectedStone = &game.stones[i]
+					game.action = StoneAimed
+					break
+				}
+			}
 		}
 
-		if rl.IsMouseButtonDown(rl.MouseButtonLeft) && hasStopped {
-			mouseLeftStart = rl.GetMousePosition()
-		}
-
-		if !rl.IsMouseButtonDown(rl.MouseButtonLeft) && mouseLeftStart != rl.NewVector2(0, 0) {
-			diff := rl.Vector2Subtract(stones[0].pos, mouseLeftStart)
-			diff = clamp(diff)
-
-			diff = rl.Vector2Scale(diff, 15.0)
-			v := rl.Vector2Scale(diff, 1/250.0)
-			fmt.Printf("%-v\n", v)
-			(&stones[0]).velocity = v
-			mouseLeftStart = rl.NewVector2(0, 0)
+		if rl.IsMouseButtonReleased(rl.MouseButtonLeft) && game.action == StoneAimed {
+			game.action = StoneHit
 		}
 	}
 
@@ -182,52 +188,97 @@ func main() {
 	}
 
 	update := func() {
-		if rl.GetTime()-lastTimeUpdated > 0.1667 {
-			seen := map[string]bool{}
-			for i := 0; i < len(stones); i++ {
-				for j := 0; j < len(stones); j++ {
-					a := &stones[i]
-					b := &stones[j]
-					key := fmt.Sprintf("%p-%p", a, b)
-					if _, ok := seen[key]; i == j || ok {
-						if ok {
-							fmt.Printf("skipping because already seen\n")
-						}
-						continue
-					}
-					if doStonesCollide(a, b) {
-						seen[fmt.Sprintf("%p-%p", a, b)] = true
-						seen[fmt.Sprintf("%p-%p", b, a)] = true
-						resolveCollision(a, b)
-					}
-					if len(seen) > 0 {
-						fmt.Printf("%-v\n", seen)
-					}
+		seen := map[string]bool{}
+		for i := 0; i < len(game.stones); i++ {
+			for j := 0; j < len(game.stones); j++ {
+				a := &game.stones[i]
+				b := &game.stones[j]
+				key := fmt.Sprintf("%p-%p", a, b)
+				if _, ok := seen[key]; i == j || ok {
+					continue
+				}
+				if doStonesCollide(a, b) {
+					seen[fmt.Sprintf("%p-%p", a, b)] = true
+					seen[fmt.Sprintf("%p-%p", b, a)] = true
+					resolveCollision(a, b)
 				}
 			}
-			for i := range stones {
-				stone := &stones[i]
-				stone.pos = rl.Vector2Add(stone.pos, stone.velocity)
-				calcVelocity(stone)
-			}
-
 		}
+		for i := range game.stones {
+			stone := &game.stones[i]
+			stone.pos = rl.Vector2Add(stone.pos, stone.velocity)
+			calcVelocity(stone)
+		}
+
+		if game.action == StoneHit {
+			mouseLeftStart := rl.GetMousePosition()
+
+			diff := rl.Vector2Subtract(game.selectedStone.pos, mouseLeftStart)
+			diff = clamp(diff)
+
+			diff = rl.Vector2Scale(diff, 15.0)
+			v := rl.Vector2Scale(diff, 1/250.0)
+			game.selectedStone.velocity = v
+
+			game.action = NoAction
+			game.selectedStone = nil
+		}
+
+		game.lastTimeUpdated = rl.GetTime()
 	}
 
 	draw := func() {
-		for _, stone := range stones {
-			rl.DrawCircleV(stone.pos, stone.radius, stone.color)
+		var SCREEN_WIDTH = int32(rl.GetScreenWidth())
+		var SCREEN_HEIGHT = int32(rl.GetScreenHeight())
+
+		// draw background
+		rl.ClearBackground(bgColor)
+
+		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", 600, 0)
+		width := (SCREEN_WIDTH/2 - int32(measuredSize.X)) / 2
+		height := (SCREEN_HEIGHT - int32(measuredSize.Y)) / 2
+		rl.DrawText("01", width, height, 600, rl.NewColor(255, 255, 255, 60))
+		rl.DrawText("07", SCREEN_WIDTH-width-int32(measuredSize.X), height, 600, rl.NewColor(255, 255, 255, 60))
+
+		rl.DrawLineEx(
+			rl.NewVector2(float32(SCREEN_WIDTH/2), 0),
+			rl.NewVector2(float32(SCREEN_WIDTH/2), float32(SCREEN_HEIGHT)),
+			10.0,
+			rl.NewColor(255, 255, 255, 125),
+		)
+
+		for i := 0; i < len(game.stones); i++ {
+			stone := &(game.stones[i])
+			if game.selectedStone == stone {
+				rl.DrawCircleV(stone.pos, stone.radius, rl.Red)
+			} else {
+				rl.DrawCircleV(stone.pos, stone.radius, stone.color)
+			}
+		}
+
+		if game.action == StoneAimed {
+			rl.DrawLineEx(
+				rl.GetMousePosition(),
+				game.selectedStone.pos,
+				3.0,
+				rl.Yellow,
+			)
 		}
 	}
 
 	for !rl.WindowShouldClose() {
+		if game.status == Uninitialized {
+			var SCREEN_WIDTH = float64(rl.GetScreenWidth())
+			var SCREEN_HEIGHT = float64(rl.GetScreenHeight())
+			game.stones = addStones(SCREEN_WIDTH, SCREEN_HEIGHT)
+			game.status = Initialized
+		}
+
 		handleMouseMove()
 
 		update()
 
 		rl.BeginDrawing()
-
-		rl.ClearBackground(bgColor)
 
 		draw()
 
