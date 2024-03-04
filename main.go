@@ -11,14 +11,22 @@ var teal = rl.NewColor(80, 114, 137, 255)
 var tealDarker = rl.NewColor(28, 71, 99, 255)
 var pinkish = rl.NewColor(255, 211, 193, 255)
 
-const STONE_RADIUS = 75
-
 type stone struct {
 	pos      rl.Vector2
 	color    rl.Color
 	velocity rl.Vector2
 	mass     float32
 	radius   float32
+}
+
+func newStone(w, h float64, color rl.Color, radius float32) stone {
+	return stone{
+		pos:      rl.NewVector2(float32(w), float32(h)),
+		color:    color,
+		velocity: rl.NewVector2(0, 0),
+		mass:     1,
+		radius:   radius,
+	}
 }
 
 type gameStatus = int8
@@ -35,9 +43,25 @@ const (
 	// magic numbers
 	VelocityDampingFactor   float32 = 0.987
 	VelocityThresholdToStop float32 = 0.07
-	MaxPullLengthAllowed    float32 = 250.0
+	MaxPullLengthAllowed    float32 = 250.0 // TODO: might need to be adjusted based on the dynamic screen size
 	MaxPushVelocityAllowed  float32 = 15.0
 )
+
+type startupConfig struct {
+	fullscreen bool
+	width      int32
+	height     int32
+}
+
+func (c *startupConfig) GetScreenDimensions() (int32, int32) {
+	if c.fullscreen {
+		w := int32(rl.GetScreenWidth())
+		h := int32(rl.GetScreenHeight())
+		return w, h
+	} else {
+		return c.width, c.height
+	}
+}
 
 type game struct {
 	status          gameStatus
@@ -45,36 +69,28 @@ type game struct {
 	stones          []stone
 	selectedStone   *stone
 	action          actionEnum
+	startupConfig   startupConfig
 }
 
-func addStones(width, height float64) []stone {
+func generateStones(screenWidth, screenHeight int32) []stone {
 	stones := []stone{}
+
+	width := float64(screenWidth)
+	height := float64(screenHeight)
+
+	stoneRadius := float32(screenHeight) * 0.069
 
 	// left side gen
 	for h := 0.25 * height; h < height; h += 0.25 * height {
 		for w := 0.1 * width; w < 0.5*width; w += 0.2 * width {
-			s := stone{
-				pos:      rl.NewVector2(float32(w), float32(h)),
-				color:    teal,
-				velocity: rl.NewVector2(0, 0),
-				mass:     1,
-				radius:   STONE_RADIUS,
-			}
-			stones = append(stones, s)
+			stones = append(stones, newStone(w, h, teal, stoneRadius))
 		}
 	}
 
 	// right side gen
 	for h := 0.25 * height; h < height; h += 0.25 * height {
 		for w := 0.9 * width; w > 0.5*width; w -= 0.2 * width {
-			s := stone{
-				pos:      rl.NewVector2(float32(w), float32(h)),
-				color:    pinkish,
-				velocity: rl.NewVector2(0, 0),
-				mass:     1,
-				radius:   STONE_RADIUS,
-			}
-			stones = append(stones, s)
+			stones = append(stones, newStone(w, h, pinkish, stoneRadius))
 		}
 	}
 
@@ -85,22 +101,25 @@ func main() {
 	game := game{
 		status:          Uninitialized,
 		lastTimeUpdated: 0.0,
-		stones: []stone{
-			{
-				pos:      rl.NewVector2(300, 300),
-				color:    rl.Black,
-				velocity: rl.NewVector2(0, 0),
-				mass:     1,
-				radius:   STONE_RADIUS,
-			},
+		stones:          []stone{},
+		selectedStone:   nil,
+		action:          NoAction,
+		startupConfig: startupConfig{
+			fullscreen: true,
+			width:      800,
+			height:     600,
 		},
-		selectedStone: nil,
-		action:        NoAction,
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
-	rl.InitWindow(0, 0, "flik")
-	rl.ToggleFullscreen()
+
+	if game.startupConfig.fullscreen {
+		rl.InitWindow(0, 0, "flik")
+		rl.ToggleFullscreen()
+	} else {
+		rl.InitWindow(game.startupConfig.width, game.startupConfig.height, "flik")
+	}
+
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(60)
@@ -112,6 +131,7 @@ func main() {
 		unitTangent := rl.NewVector2(-unitNormal.Y, unitNormal.X)
 
 		// 2. initial velocity vectors
+		// everything stays as-is
 
 		// 3.
 		van := rl.Vector2DotProduct(unitNormal, a.velocity)
@@ -142,29 +162,6 @@ func main() {
 		b.velocity = vbV
 	}
 
-	doStonesCollide := func(a, b *stone) bool {
-		return rl.CheckCollisionCircles(a.pos, a.radius, b.pos, b.radius)
-	}
-
-	handleMouseMove := func() {
-		mousePos := rl.GetMousePosition()
-		hasStopped := game.selectedStone == nil || game.selectedStone.velocity == rl.NewVector2(0, 0)
-
-		if rl.IsMouseButtonDown(rl.MouseButtonRight) && hasStopped {
-			for i, stone := range game.stones {
-				if rl.CheckCollisionPointCircle(mousePos, stone.pos, stone.radius) {
-					game.selectedStone = &game.stones[i]
-					game.action = StoneAimed
-					break
-				}
-			}
-		}
-
-		if rl.IsMouseButtonReleased(rl.MouseButtonLeft) && game.action == StoneAimed {
-			game.action = StoneHit
-		}
-	}
-
 	calcVelocity := func(s *stone) {
 		s.velocity = rl.Vector2Scale(s.velocity, VelocityDampingFactor)
 		if rl.Vector2Length(s.velocity) < VelocityThresholdToStop {
@@ -191,7 +188,7 @@ func main() {
 					continue
 				}
 
-				if doStonesCollide(a, b) {
+				if rl.CheckCollisionCircles(a.pos, a.radius, b.pos, b.radius) {
 					seen[fmt.Sprintf("%d-%d", i, j)] = true
 					seen[fmt.Sprintf("%d-%d", j, i)] = true
 					collidingPairs = append(collidingPairs, pair{a, b})
@@ -214,11 +211,11 @@ func main() {
 			diff := rl.Vector2Subtract(game.selectedStone.pos, rl.GetMousePosition())
 			// find the length of the diff vector
 			length := rl.Vector2Length(diff)
-			// make sure the length can be 250.0 at most
+			// make sure the length is bounded
 			length = rl.Clamp(length, 0, MaxPullLengthAllowed)
 			// the max speed we allow is 15,
 			// so we calculate the speed based on the distance from the selected stone
-			speed := (MaxPushVelocityAllowed * length) / MaxPullLengthAllowed
+			speed := MaxPushVelocityAllowed * (length / MaxPullLengthAllowed)
 			// normalize the diff vector
 			// scale it up based on the speed
 			v := rl.Vector2Scale(rl.Vector2Normalize(diff), speed)
@@ -230,6 +227,25 @@ func main() {
 		}
 
 		game.lastTimeUpdated = rl.GetTime()
+	}
+
+	handleMouseMove := func() {
+		mousePos := rl.GetMousePosition()
+		hasStopped := game.selectedStone == nil || game.selectedStone.velocity == rl.NewVector2(0, 0)
+
+		if rl.IsMouseButtonDown(rl.MouseButtonRight) && hasStopped {
+			for i, stone := range game.stones {
+				if rl.CheckCollisionPointCircle(mousePos, stone.pos, stone.radius) {
+					game.selectedStone = &game.stones[i]
+					game.action = StoneAimed
+					break
+				}
+			}
+		}
+
+		if rl.IsMouseButtonReleased(rl.MouseButtonLeft) && game.action == StoneAimed {
+			game.action = StoneHit
+		}
 	}
 
 	drawStone := func(s *stone) {
@@ -247,8 +263,7 @@ func main() {
 	}
 
 	draw := func() {
-		SCREEN_WIDTH := int32(rl.GetScreenWidth())
-		SCREEN_HEIGHT := int32(rl.GetScreenHeight())
+		screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
 
 		// draw background
 		rl.ClearBackground(bgColor)
@@ -260,8 +275,8 @@ func main() {
 		// rl.DrawText("07", SCREEN_WIDTH-width-int32(measuredSize.X), height, 600, rl.NewColor(255, 255, 255, 60))
 
 		rl.DrawLineEx(
-			rl.NewVector2(float32(SCREEN_WIDTH/2), 0),
-			rl.NewVector2(float32(SCREEN_WIDTH/2), float32(SCREEN_HEIGHT)),
+			rl.NewVector2(float32(screenWidth/2), 0),
+			rl.NewVector2(float32(screenWidth/2), float32(screenHeight)),
 			10.0,
 			rl.NewColor(255, 255, 255, 125),
 		)
@@ -293,7 +308,7 @@ func main() {
 
 				rl.DrawRing(
 					game.selectedStone.pos,
-					game.selectedStone.radius*1.05,
+					game.selectedStone.radius,
 					game.selectedStone.radius*1.5,
 					0.0,
 					angle,
@@ -306,9 +321,8 @@ func main() {
 
 	for !rl.WindowShouldClose() {
 		if game.status == Uninitialized {
-			var SCREEN_WIDTH = float64(rl.GetScreenWidth())
-			var SCREEN_HEIGHT = float64(rl.GetScreenHeight())
-			game.stones = addStones(SCREEN_WIDTH, SCREEN_HEIGHT)
+			screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
+			game.stones = generateStones(screenWidth, screenHeight)
 			game.status = Initialized
 		}
 
