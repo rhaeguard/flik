@@ -32,6 +32,11 @@ const (
 	NoAction   actionEnum = iota
 	StoneAimed actionEnum = iota
 	StoneHit   actionEnum = iota
+	// magic numbers
+	VelocityDampingFactor   float32 = 0.987
+	VelocityThresholdToStop float32 = 0.07
+	MaxPullLengthAllowed    float32 = 250.0
+	MaxPushVelocityAllowed  float32 = 15.0
 )
 
 type game struct {
@@ -161,9 +166,8 @@ func main() {
 	}
 
 	calcVelocity := func(s *stone) {
-		velocityDampingFactor := float32(0.987)
-		s.velocity = rl.Vector2Scale(s.velocity, velocityDampingFactor)
-		if rl.Vector2Length(s.velocity) < 0.07 {
+		s.velocity = rl.Vector2Scale(s.velocity, VelocityDampingFactor)
+		if rl.Vector2Length(s.velocity) < VelocityThresholdToStop {
 			s.velocity = rl.NewVector2(0, 0)
 		}
 	}
@@ -211,11 +215,10 @@ func main() {
 			// find the length of the diff vector
 			length := rl.Vector2Length(diff)
 			// make sure the length can be 250.0 at most
-			length = rl.Clamp(length, 0, 250)
+			length = rl.Clamp(length, 0, MaxPullLengthAllowed)
 			// the max speed we allow is 15,
 			// so we calculate the speed based on the distance from the selected stone
-			// TODO: 15 and 250 are magic numbers, make them constants
-			speed := (15.0 * length) / 250.0
+			speed := (MaxPushVelocityAllowed * length) / MaxPullLengthAllowed
 			// normalize the diff vector
 			// scale it up based on the speed
 			v := rl.Vector2Scale(rl.Vector2Normalize(diff), speed)
@@ -265,7 +268,6 @@ func main() {
 
 		for i := 0; i < len(game.stones); i++ {
 			stone := &(game.stones[i])
-			// rl.DrawCircleV(stone.pos, stone.radius, stone.color)
 			drawStone(stone)
 		}
 
@@ -284,8 +286,8 @@ func main() {
 				diff := rl.Vector2Subtract(game.selectedStone.pos, mouseLeftStart)
 
 				length := rl.Vector2Length(diff)
-				length = rl.Clamp(length, 0, 250)
-				normalizedSpeed := ((15.0 * length) / 250.0) / 15.0
+				length = rl.Clamp(length, 0, MaxPullLengthAllowed)
+				normalizedSpeed := length / MaxPullLengthAllowed
 				// given the normalized speed, calculate the angle
 				angle := normalizedSpeed * 360.0
 
