@@ -138,37 +138,6 @@ func main() {
 		return rl.CheckCollisionCircles(a.pos, a.radius, b.pos, b.radius)
 	}
 
-	// clamp makes sure that the diff vector is
-	// bounded to a max value on both axis
-	clamp := func(diff rl.Vector2) rl.Vector2 {
-		maxValue := float32(250.0)
-		x := diff.X
-		y := diff.Y
-
-		// we need the ratio to keep the same angle
-		// otherwise individually clamping the dimensions
-		// would change the angle we aim for
-		ratio := y / x
-
-		if x > maxValue {
-			x = maxValue
-			y = ratio * x
-		} else if x < -maxValue {
-			x = -maxValue
-			y = ratio * x
-		}
-
-		if y > maxValue {
-			y = maxValue
-			x = y / ratio
-		} else if y < -maxValue {
-			y = -maxValue
-			x = y / ratio
-		}
-
-		return rl.NewVector2(x, y)
-	}
-
 	handleMouseMove := func() {
 		mousePos := rl.GetMousePosition()
 		hasStopped := game.selectedStone == nil || game.selectedStone.velocity == rl.NewVector2(0, 0)
@@ -220,14 +189,19 @@ func main() {
 		}
 
 		if game.action == StoneHit {
-			mouseLeftStart := rl.GetMousePosition()
-
-			diff := rl.Vector2Subtract(game.selectedStone.pos, mouseLeftStart)
-			diff = clamp(diff)
-			// these two lines basically lock the max velocity to 15.0
-			diff = rl.Vector2Scale(diff, 15.0)
-			// 250 is the max distance you can cock back the aiming thingy
-			v := rl.Vector2Scale(diff, 1/250.0)
+			// find the diff between the selected stone and where the mouse is
+			diff := rl.Vector2Subtract(game.selectedStone.pos, rl.GetMousePosition())
+			// find the length of the diff vector
+			length := rl.Vector2Length(diff)
+			// make sure the length can be 250.0 at most
+			length = rl.Clamp(length, 0, 250)
+			// the max speed we allow is 15,
+			// so we calculate the speed based on the distance from the selected stone
+			// TODO: 15 and 250 are magic numbers, make them constants
+			speed := (15.0 * length) / 250.0
+			// normalize the diff vector
+			// scale it up based on the speed
+			v := rl.Vector2Scale(rl.Vector2Normalize(diff), speed)
 
 			game.selectedStone.velocity = v
 
@@ -245,11 +219,11 @@ func main() {
 		// draw background
 		rl.ClearBackground(bgColor)
 
-		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", 600, 0)
-		width := (SCREEN_WIDTH/2 - int32(measuredSize.X)) / 2
-		height := (SCREEN_HEIGHT - int32(measuredSize.Y)) / 2
-		rl.DrawText("01", width, height, 600, rl.NewColor(255, 255, 255, 60))
-		rl.DrawText("07", SCREEN_WIDTH-width-int32(measuredSize.X), height, 600, rl.NewColor(255, 255, 255, 60))
+		// measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", 600, 0)
+		// width := (SCREEN_WIDTH/2 - int32(measuredSize.X)) / 2
+		// height := (SCREEN_HEIGHT - int32(measuredSize.Y)) / 2
+		// rl.DrawText("01", width, height, 600, rl.NewColor(255, 255, 255, 60))
+		// rl.DrawText("07", SCREEN_WIDTH-width-int32(measuredSize.X), height, 600, rl.NewColor(255, 255, 255, 60))
 
 		rl.DrawLineEx(
 			rl.NewVector2(float32(SCREEN_WIDTH/2), 0),
@@ -260,11 +234,7 @@ func main() {
 
 		for i := 0; i < len(game.stones); i++ {
 			stone := &(game.stones[i])
-			if game.selectedStone == stone {
-				rl.DrawCircleV(stone.pos, stone.radius, rl.Red)
-			} else {
-				rl.DrawCircleV(stone.pos, stone.radius, stone.color)
-			}
+			rl.DrawCircleV(stone.pos, stone.radius, stone.color)
 		}
 
 		if game.action == StoneAimed {
@@ -274,6 +244,35 @@ func main() {
 				3.0,
 				rl.Yellow,
 			)
+
+			{
+				// TODO: this should not really be calculated here
+				// diff := rl.Vector2Subtract(game.selectedStone.pos, rl.GetMousePosition())
+				// diff = clamp(diff)
+				// diff = rl.Vector2Scale(diff, 15.0)
+				// velocityLengthNorm := (rl.Vector2Length(rl.Vector2Scale(diff, 1/250.0))) / 21.21
+				// angle := velocityLengthNorm * 360.0
+
+				mouseLeftStart := rl.GetMousePosition()
+
+				diff := rl.Vector2Subtract(game.selectedStone.pos, mouseLeftStart)
+
+				length := rl.Vector2Length(diff)
+				length = rl.Clamp(length, 0, 250)
+				normalizedSpeed := ((15.0 * length) / 250.0) / 15.0
+				// given the normalized speed, calculate the angle
+				angle := normalizedSpeed * 360.0
+
+				rl.DrawRing(
+					game.selectedStone.pos,
+					game.selectedStone.radius*1.05,
+					game.selectedStone.radius*1.5,
+					0.0,
+					angle,
+					0,
+					rl.NewColor(255, 255, 255, 60),
+				)
+			}
 		}
 	}
 
