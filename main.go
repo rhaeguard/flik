@@ -138,23 +138,32 @@ func main() {
 		return rl.CheckCollisionCircles(a.pos, a.radius, b.pos, b.radius)
 	}
 
-	clamp := func(v rl.Vector2) rl.Vector2 {
-		maxValue := float32(250)
-		x := v.X
-		y := v.Y
+	// clamp makes sure that the diff vector is
+	// bounded to a max value on both axis
+	clamp := func(diff rl.Vector2) rl.Vector2 {
+		maxValue := float32(250.0)
+		x := diff.X
+		y := diff.Y
 
-		if v.X > maxValue {
+		// we need the ratio to keep the same angle
+		// otherwise individually clamping the dimensions
+		// would change the angle we aim for
+		ratio := y / x
+
+		if x > maxValue {
 			x = maxValue
-		}
-		if v.X < -maxValue {
+			y = ratio * x
+		} else if x < -maxValue {
 			x = -maxValue
+			y = ratio * x
 		}
 
-		if v.Y > maxValue {
+		if y > maxValue {
 			y = maxValue
-		}
-		if v.Y < -maxValue {
+			x = y / ratio
+		} else if y < -maxValue {
 			y = -maxValue
+			x = y / ratio
 		}
 
 		return rl.NewVector2(x, y)
@@ -215,9 +224,11 @@ func main() {
 
 			diff := rl.Vector2Subtract(game.selectedStone.pos, mouseLeftStart)
 			diff = clamp(diff)
-
+			// these two lines basically lock the max velocity to 15.0
 			diff = rl.Vector2Scale(diff, 15.0)
+			// 250 is the max distance you can cock back the aiming thingy
 			v := rl.Vector2Scale(diff, 1/250.0)
+
 			game.selectedStone.velocity = v
 
 			game.action = NoAction
@@ -228,8 +239,8 @@ func main() {
 	}
 
 	draw := func() {
-		var SCREEN_WIDTH = int32(rl.GetScreenWidth())
-		var SCREEN_HEIGHT = int32(rl.GetScreenHeight())
+		SCREEN_WIDTH := int32(rl.GetScreenWidth())
+		SCREEN_HEIGHT := int32(rl.GetScreenHeight())
 
 		// draw background
 		rl.ClearBackground(bgColor)
