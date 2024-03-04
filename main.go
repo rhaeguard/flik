@@ -6,7 +6,10 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-var bgColor = rl.NewColor(54, 89, 74, 255)
+var bgColor = rl.NewColor(139, 212, 195, 255)
+var teal = rl.NewColor(80, 114, 137, 255)
+var tealDarker = rl.NewColor(28, 71, 99, 255)
+var pinkish = rl.NewColor(255, 211, 193, 255)
 
 const STONE_RADIUS = 75
 
@@ -47,7 +50,7 @@ func addStones(width, height float64) []stone {
 		for w := 0.1 * width; w < 0.5*width; w += 0.2 * width {
 			s := stone{
 				pos:      rl.NewVector2(float32(w), float32(h)),
-				color:    rl.Black,
+				color:    teal,
 				velocity: rl.NewVector2(0, 0),
 				mass:     1,
 				radius:   STONE_RADIUS,
@@ -61,7 +64,7 @@ func addStones(width, height float64) []stone {
 		for w := 0.9 * width; w > 0.5*width; w -= 0.2 * width {
 			s := stone{
 				pos:      rl.NewVector2(float32(w), float32(h)),
-				color:    rl.White,
+				color:    pinkish,
 				velocity: rl.NewVector2(0, 0),
 				mass:     1,
 				radius:   STONE_RADIUS,
@@ -90,7 +93,7 @@ func main() {
 		action:        NoAction,
 	}
 
-	// mouseLeftStart := rl.NewVector2(0, 0)
+	rl.SetConfigFlags(rl.FlagMsaa4xHint)
 	rl.InitWindow(0, 0, "flik")
 	rl.ToggleFullscreen()
 	defer rl.CloseWindow()
@@ -226,6 +229,20 @@ func main() {
 		game.lastTimeUpdated = rl.GetTime()
 	}
 
+	drawStone := func(s *stone) {
+		rl.DrawCircleV(s.pos, s.radius, s.color)
+
+		rl.DrawRing(
+			s.pos,
+			s.radius*0.8,
+			s.radius*1.01,
+			0.0,
+			360.0,
+			0,
+			tealDarker,
+		)
+	}
+
 	draw := func() {
 		SCREEN_WIDTH := int32(rl.GetScreenWidth())
 		SCREEN_HEIGHT := int32(rl.GetScreenHeight())
@@ -248,7 +265,8 @@ func main() {
 
 		for i := 0; i < len(game.stones); i++ {
 			stone := &(game.stones[i])
-			rl.DrawCircleV(stone.pos, stone.radius, stone.color)
+			// rl.DrawCircleV(stone.pos, stone.radius, stone.color)
+			drawStone(stone)
 		}
 
 		if game.action == StoneAimed {
