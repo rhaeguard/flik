@@ -165,23 +165,37 @@ func main() {
 		}
 	}
 
+	type pair struct {
+		a, b *stone
+	}
 	update := func() {
 		seen := map[string]bool{}
+		collidingPairs := []pair{}
 		for i := 0; i < len(game.stones); i++ {
 			for j := 0; j < len(game.stones); j++ {
-				a := &game.stones[i]
-				b := &game.stones[j]
-				key := fmt.Sprintf("%p-%p", a, b)
-				if _, ok := seen[key]; i == j || ok {
+				if i == j {
 					continue
 				}
+
+				a := &game.stones[i]
+				b := &game.stones[j]
+				key := fmt.Sprintf("%d-%d", i, j)
+				if _, ok := seen[key]; ok {
+					continue
+				}
+
 				if doStonesCollide(a, b) {
-					seen[fmt.Sprintf("%p-%p", a, b)] = true
-					seen[fmt.Sprintf("%p-%p", b, a)] = true
-					resolveCollision(a, b)
+					seen[fmt.Sprintf("%d-%d", i, j)] = true
+					seen[fmt.Sprintf("%d-%d", j, i)] = true
+					collidingPairs = append(collidingPairs, pair{a, b})
 				}
 			}
 		}
+
+		for _, p := range collidingPairs {
+			resolveCollision(p.a, p.b)
+		}
+
 		for i := range game.stones {
 			stone := &game.stones[i]
 			stone.pos = rl.Vector2Add(stone.pos, stone.velocity)
@@ -247,12 +261,6 @@ func main() {
 
 			{
 				// TODO: this should not really be calculated here
-				// diff := rl.Vector2Subtract(game.selectedStone.pos, rl.GetMousePosition())
-				// diff = clamp(diff)
-				// diff = rl.Vector2Scale(diff, 15.0)
-				// velocityLengthNorm := (rl.Vector2Length(rl.Vector2Scale(diff, 1/250.0))) / 21.21
-				// angle := velocityLengthNorm * 360.0
-
 				mouseLeftStart := rl.GetMousePosition()
 
 				diff := rl.Vector2Subtract(game.selectedStone.pos, mouseLeftStart)
