@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -68,8 +69,10 @@ type game struct {
 	lastTimeUpdated float64
 	stones          []stone
 	selectedStone   *stone
+	hitStoneMoving  *stone
 	action          actionEnum
 	startupConfig   startupConfig
+	allParticles    []particle
 }
 
 func generateStones(screenWidth, screenHeight int32) []stone {
@@ -103,12 +106,14 @@ func main() {
 		lastTimeUpdated: 0.0,
 		stones:          []stone{},
 		selectedStone:   nil,
+		hitStoneMoving:  nil,
 		action:          NoAction,
 		startupConfig: startupConfig{
 			fullscreen: true,
 			width:      800,
 			height:     600,
 		},
+		allParticles: []particle{},
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
@@ -120,9 +125,9 @@ func main() {
 		rl.InitWindow(game.startupConfig.width, game.startupConfig.height, "flik")
 	}
 
-	defer rl.CloseWindow()
-
 	rl.SetTargetFPS(60)
+
+	defer rl.CloseWindow()
 
 	resolveCollision := func(a, b *stone) {
 		// 1. find unit normal and unit tangent
@@ -171,6 +176,8 @@ func main() {
 
 	type pair struct {
 		a, b *stone
+		p    rl.Vector2
+		life float32
 	}
 	update := func() {
 		seen := map[string]bool{}
@@ -191,13 +198,34 @@ func main() {
 				if rl.CheckCollisionCircles(a.pos, a.radius, b.pos, b.radius) {
 					seen[fmt.Sprintf("%d-%d", i, j)] = true
 					seen[fmt.Sprintf("%d-%d", j, i)] = true
-					collidingPairs = append(collidingPairs, pair{a, b})
+					intersection := circleIntersectionPoint(a, b)
+
+					combinedVelocity := rl.Vector2Add(a.velocity, b.velocity)
+
+					life := (2 * rl.Vector2Length(combinedVelocity)) / MaxPushVelocityAllowed
+
+					collidingPairs = append(collidingPairs, pair{a, b, intersection, life})
+
 				}
 			}
 		}
 
 		for _, p := range collidingPairs {
 			resolveCollision(p.a, p.b)
+			game.hitStoneMoving = nil
+
+			for i := 0.0; i < 100; i += 0.5 {
+				part := NewParticle(
+					p.p,
+					float32(3.6*float32(i)),
+					20*rand.Float32(),
+					p.life,
+					10*(rand.Float32()+0.5),
+					rl.NewColor(255, 192, 113, 255),
+				)
+
+				game.allParticles = append(game.allParticles, part)
+			}
 		}
 
 		for i := range game.stones {
@@ -223,7 +251,63 @@ func main() {
 			game.selectedStone.velocity = v
 
 			game.action = NoAction
+			game.hitStoneMoving = game.selectedStone
 			game.selectedStone = nil
+		}
+
+		{
+			// rocket exhaust
+			stone := game.hitStoneMoving
+
+			if stone != nil {
+				rocketColor := rl.Red
+
+				if stone.color == teal {
+					rocketColor = rl.SkyBlue
+				}
+
+				generalAngle := (rl.Vector2Angle(
+					rl.Vector2Normalize(stone.velocity),
+					rl.NewVector2(1, 0),
+				) * rl.Rad2deg) - 180
+
+				life := 0.3 * (rl.Vector2Length(stone.velocity)) / 15
+
+				for i := 0; i < 25; i++ {
+					angle := generalAngle + float32((rand.Intn(20) - 10))
+					part := NewParticle(
+						stone.pos,
+						float32(angle),
+						20*rand.Float32(),
+						life,
+						stone.radius*1.02,
+						rocketColor,
+					)
+
+					game.allParticles = append(game.allParticles, part)
+				}
+
+				if rl.Vector2Length(stone.velocity) == 0 {
+					game.hitStoneMoving = nil
+				}
+
+			}
+		}
+
+		for i := 0; i < len(game.allParticles); i++ {
+			game.allParticles[i].update()
+		}
+
+		{
+			// filter out the dead particles
+			newAllParticles := []particle{}
+			for _, p := range game.allParticles {
+				if p.life > 0 {
+					newAllParticles = append(newAllParticles, p)
+				}
+			}
+
+			game.allParticles = newAllParticles
 		}
 
 		game.lastTimeUpdated = rl.GetTime()
@@ -286,6 +370,15 @@ func main() {
 			drawStone(stone)
 		}
 
+		{
+			// draw particles
+			for _, p := range game.allParticles {
+				rl.BeginBlendMode(rl.BlendAdditive)
+				p.render()
+				rl.EndBlendMode()
+			}
+		}
+
 		if game.action == StoneAimed {
 			rl.DrawLineEx(
 				rl.GetMousePosition(),
@@ -323,6 +416,7 @@ func main() {
 		if game.status == Uninitialized {
 			screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
 			game.stones = generateStones(screenWidth, screenHeight)
+			// game.stones = []stone{}
 			game.status = Initialized
 		}
 
