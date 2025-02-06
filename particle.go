@@ -49,7 +49,6 @@ func (p *particle) update() {
 func (p *particle) render() {
 	if p.life > 0 {
 		alpha := 255 * p.life / 2.0
-		// rl.DrawCircleV(p.pos, p.radius, rl.NewColor(255, 192, 113, uint8(alpha)))
 		rl.DrawCircleV(p.pos, p.radius, rl.NewColor(p.color.R, p.color.G, p.color.B, uint8(alpha)))
 	}
 }

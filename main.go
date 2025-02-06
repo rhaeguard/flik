@@ -64,6 +64,11 @@ func (c *startupConfig) GetScreenDimensions() (int32, int32) {
 	}
 }
 
+type score struct {
+	teal uint8
+	pink uint8
+}
+
 type game struct {
 	status          gameStatus
 	lastTimeUpdated float64
@@ -73,6 +78,8 @@ type game struct {
 	action          actionEnum
 	startupConfig   startupConfig
 	allParticles    []particle
+	score           *score
+	colorTurn       rl.Color
 }
 
 func generateStones(screenWidth, screenHeight int32) []stone {
@@ -114,6 +121,11 @@ func main() {
 			height:     600,
 		},
 		allParticles: []particle{},
+		score: &score{
+			teal: 6,
+			pink: 6,
+		},
+		colorTurn: teal,
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
@@ -131,8 +143,7 @@ func main() {
 
 	resolveCollision := func(a, b *stone) {
 		// 1. find unit normal and unit tangent
-		normalV := rl.NewVector2(a.pos.X-b.pos.X, a.pos.Y-b.pos.Y)
-		unitNormal := rl.Vector2Scale(normalV, 1/rl.Vector2Length(normalV))
+		unitNormal := rl.Vector2Normalize(rl.Vector2Subtract(a.pos, b.pos))
 		unitTangent := rl.NewVector2(-unitNormal.Y, unitNormal.X)
 
 		// 2. initial velocity vectors
@@ -253,6 +264,11 @@ func main() {
 			game.action = NoAction
 			game.hitStoneMoving = game.selectedStone
 			game.selectedStone = nil
+			if game.colorTurn == teal {
+				game.colorTurn = pinkish
+			} else {
+				game.colorTurn = teal
+			}
 		}
 
 		{
@@ -310,16 +326,47 @@ func main() {
 			game.allParticles = newAllParticles
 		}
 
+		scoreTeal := 0
+		scorePink := 0
+
+		screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
+		screenRect := rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight))
+
+		for _, stone := range game.stones {
+			if !rl.CheckCollisionCircleRec(stone.pos, stone.radius, screenRect) {
+				continue
+			}
+			if stone.color == teal {
+				scoreTeal += 1
+			}
+
+			if stone.color == pinkish {
+				scorePink += 1
+			}
+		}
+
+		game.score.pink = uint8(scorePink)
+		game.score.teal = uint8(scoreTeal)
+
 		game.lastTimeUpdated = rl.GetTime()
+	}
+
+	areStonesStill := func() bool {
+		for _, stone := range game.stones {
+			if rl.Vector2Length(stone.velocity) != 0 {
+				return false
+			}
+		}
+		return true
 	}
 
 	handleMouseMove := func() {
 		mousePos := rl.GetMousePosition()
-		hasStopped := game.selectedStone == nil || game.selectedStone.velocity == rl.NewVector2(0, 0)
+		hasStopped := areStonesStill()
 
 		if rl.IsMouseButtonDown(rl.MouseButtonRight) && hasStopped {
 			for i, stone := range game.stones {
-				if rl.CheckCollisionPointCircle(mousePos, stone.pos, stone.radius) {
+				if game.colorTurn == stone.color && rl.CheckCollisionPointCircle(mousePos, stone.pos, stone.radius) {
 					game.selectedStone = &game.stones[i]
 					game.action = StoneAimed
 					break
@@ -344,6 +391,19 @@ func main() {
 			0,
 			tealDarker,
 		)
+
+		if s.color == game.colorTurn {
+			rl.DrawRing(
+				s.pos,
+				s.radius*0.2,
+				s.radius*0.5,
+				0.0,
+				360.0,
+				0,
+				rl.Red,
+			)
+		}
+
 	}
 
 	draw := func() {
@@ -352,11 +412,14 @@ func main() {
 		// draw background
 		rl.ClearBackground(bgColor)
 
-		// measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", 600, 0)
-		// width := (SCREEN_WIDTH/2 - int32(measuredSize.X)) / 2
-		// height := (SCREEN_HEIGHT - int32(measuredSize.Y)) / 2
-		// rl.DrawText("01", width, height, 600, rl.NewColor(255, 255, 255, 60))
-		// rl.DrawText("07", SCREEN_WIDTH-width-int32(measuredSize.X), height, 600, rl.NewColor(255, 255, 255, 60))
+		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", 600, 0)
+		width := (screenWidth/2 - int32(measuredSize.X)) / 2
+		height := (screenHeight - int32(measuredSize.Y)) / 2
+		rl.DrawText(fmt.Sprintf("0%d", game.score.teal), width, height, 600, rl.NewColor(255, 255, 255, 60))
+		rl.DrawText("teal", width+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, 200, rl.NewColor(255, 255, 255, 60))
+
+		rl.DrawText(fmt.Sprintf("0%d", game.score.pink), screenWidth-width-int32(measuredSize.X), height, 600, rl.NewColor(255, 255, 255, 60))
+		rl.DrawText("pink", screenWidth-width-int32(measuredSize.X)+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, 200, rl.NewColor(255, 255, 255, 60))
 
 		rl.DrawLineEx(
 			rl.NewVector2(float32(screenWidth/2), 0),
