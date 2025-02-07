@@ -333,7 +333,7 @@ func main() {
 		screenRect := rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight))
 
 		for _, stone := range game.stones {
-			if !rl.CheckCollisionCircleRec(stone.pos, stone.radius, screenRect) {
+			if !rl.CheckCollisionCircleRec(stone.pos, stone.radius*0.9, screenRect) {
 				continue
 			}
 			if stone.color == teal {
