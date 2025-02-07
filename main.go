@@ -78,6 +78,7 @@ type game struct {
 	action          actionEnum
 	startupConfig   startupConfig
 	allParticles    []particle
+	allShards       []shard
 	score           *score
 	colorTurn       rl.Color
 }
@@ -121,6 +122,7 @@ func main() {
 			height:     600,
 		},
 		allParticles: []particle{},
+		allShards:    []shard{},
 		score: &score{
 			teal: 6,
 			pink: 6,
@@ -225,8 +227,21 @@ func main() {
 			resolveCollision(p.a, p.b)
 			game.hitStoneMoving = nil
 
+			// for i := 0.0; i < 100; i += 0.5 {
+			// 	part := NewParticle(
+			// 		p.p,
+			// 		float32(3.6*float32(i)),
+			// 		20*rand.Float32(),
+			// 		p.life,
+			// 		10*(rand.Float32()+0.5),
+			// 		rl.NewColor(255, 192, 113, 255),
+			// 	)
+
+			// 	game.allParticles = append(game.allParticles, part)
+			// }
+
 			for i := 0.0; i < 100; i += 0.5 {
-				part := NewParticle(
+				part := NewShard(
 					p.p,
 					float32(3.6*float32(i)),
 					20*rand.Float32(),
@@ -235,7 +250,7 @@ func main() {
 					rl.NewColor(255, 192, 113, 255),
 				)
 
-				game.allParticles = append(game.allParticles, part)
+				game.allShards = append(game.allShards, part)
 			}
 		}
 
@@ -314,6 +329,10 @@ func main() {
 			game.allParticles[i].update()
 		}
 
+		for i := 0; i < len(game.allShards); i++ {
+			game.allShards[i].update()
+		}
+
 		{
 			// filter out the dead particles
 			newAllParticles := []particle{}
@@ -324,6 +343,18 @@ func main() {
 			}
 
 			game.allParticles = newAllParticles
+		}
+
+		{
+			// filter out the dead shards
+			newShards := []shard{}
+			for _, p := range game.allShards {
+				if p.life > 0 {
+					newShards = append(newShards, p)
+				}
+			}
+
+			game.allShards = newShards
 		}
 
 		scoreTeal := 0
@@ -436,6 +467,15 @@ func main() {
 		{
 			// draw particles
 			for _, p := range game.allParticles {
+				rl.BeginBlendMode(rl.BlendAdditive)
+				p.render()
+				rl.EndBlendMode()
+			}
+		}
+
+		{
+			// draw shards
+			for _, p := range game.allShards {
 				rl.BeginBlendMode(rl.BlendAdditive)
 				p.render()
 				rl.EndBlendMode()
