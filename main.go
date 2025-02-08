@@ -45,7 +45,7 @@ const (
 	VelocityDampingFactor   float32 = 0.987
 	VelocityThresholdToStop float32 = 0.07
 	MaxPullLengthAllowed    float32 = 250.0 // TODO: might need to be adjusted based on the dynamic screen size
-	MaxPushVelocityAllowed  float32 = 15.0
+	MaxPushVelocityAllowed  float32 = 19.0
 )
 
 type startupConfig struct {
@@ -91,17 +91,18 @@ func generateStones(screenWidth, screenHeight int32) []stone {
 
 	stoneRadius := float32(screenHeight) * 0.069
 
-	// left side gen
-	for h := 0.25 * height; h < height; h += 0.25 * height {
-		for w := 0.1 * width; w < 0.5*width; w += 0.2 * width {
-			stones = append(stones, newStone(w, h, teal, stoneRadius))
-		}
-	}
+	for x := 1; x <= 3; x += 1 {
+		for y := 1; y <= 4; y += 1 {
+			if (x == 2 && (y == 1 || y == 4)) || (x == 1 || x == 3) && (y == 2 || y == 3) {
+				continue
+			}
 
-	// right side gen
-	for h := 0.25 * height; h < height; h += 0.25 * height {
-		for w := 0.9 * width; w > 0.5*width; w -= 0.2 * width {
-			stones = append(stones, newStone(w, h, pinkish, stoneRadius))
+			h := height * float64(y) * 0.2
+
+			w1 := width * float64(x) * 0.125
+			w2 := w1 + width*0.5
+
+			stones = append(stones, newStone(w1, h, teal, stoneRadius), newStone(w2, h, pinkish, stoneRadius))
 		}
 	}
 
@@ -118,8 +119,8 @@ func main() {
 		action:          NoAction,
 		startupConfig: startupConfig{
 			fullscreen: true,
-			width:      800,
-			height:     600,
+			width:      100,
+			height:     75,
 		},
 		allParticles: []particle{},
 		allShards:    []shard{},
@@ -183,7 +184,8 @@ func main() {
 	calcVelocity := func(s *stone) {
 		s.velocity = rl.Vector2Scale(s.velocity, VelocityDampingFactor)
 		if rl.Vector2Length(s.velocity) < VelocityThresholdToStop {
-			s.velocity = rl.NewVector2(0, 0)
+			s.velocity.X = 0
+			s.velocity.Y = 0
 		}
 	}
 
@@ -226,19 +228,6 @@ func main() {
 		for _, p := range collidingPairs {
 			resolveCollision(p.a, p.b)
 			game.hitStoneMoving = nil
-
-			// for i := 0.0; i < 100; i += 0.5 {
-			// 	part := NewParticle(
-			// 		p.p,
-			// 		float32(3.6*float32(i)),
-			// 		20*rand.Float32(),
-			// 		p.life,
-			// 		10*(rand.Float32()+0.5),
-			// 		rl.NewColor(255, 192, 113, 255),
-			// 	)
-
-			// 	game.allParticles = append(game.allParticles, part)
-			// }
 
 			for i := 0.0; i < 100; i += 0.5 {
 				part := NewShard(
@@ -365,6 +354,7 @@ func main() {
 
 		for _, stone := range game.stones {
 			if !rl.CheckCollisionCircleRec(stone.pos, stone.radius*0.9, screenRect) {
+				fmt.Printf("Stone not in the game: %-v\n", stone.pos)
 				continue
 			}
 			if stone.color == teal {
@@ -519,7 +509,6 @@ func main() {
 		if game.status == Uninitialized {
 			screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
 			game.stones = generateStones(screenWidth, screenHeight)
-			// game.stones = []stone{}
 			game.status = Initialized
 		}
 

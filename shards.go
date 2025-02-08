@@ -88,7 +88,7 @@ func (p *shard) update() {
 		p.pos = rl.Vector2Add(p.pos, p.velocity)
 
 		for i := range p.angles {
-			p.angles[i] += 2
+			p.angles[i] += 10
 		}
 
 		eRadius := rl.NewVector2(
