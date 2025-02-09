@@ -12,6 +12,29 @@ var teal = rl.NewColor(80, 114, 137, 255)
 var tealDarker = rl.NewColor(28, 71, 99, 255)
 var pinkish = rl.NewColor(255, 211, 193, 255)
 
+type gameStatus = int8
+type actionEnum = int8
+
+// magic numbers
+var VelocityDampingFactor float32
+var VelocityThresholdToStop float32
+var MaxPullLengthAllowed float32
+var MaxPushVelocityAllowed float32
+
+// shards and particles
+var MaxParticleSpeed float32
+var MaxShardRadius float32
+
+const (
+	Uninitialized gameStatus = iota
+	Initialized   gameStatus = iota
+	Stopped       gameStatus = iota
+	// action enums
+	NoAction   actionEnum = iota
+	StoneAimed actionEnum = iota
+	StoneHit   actionEnum = iota
+)
+
 type stone struct {
 	pos      rl.Vector2
 	color    rl.Color
@@ -29,24 +52,6 @@ func newStone(w, h float64, color rl.Color, radius float32) stone {
 		radius:   radius,
 	}
 }
-
-type gameStatus = int8
-type actionEnum = int8
-
-const (
-	Uninitialized gameStatus = iota
-	Initialized   gameStatus = iota
-	Stopped       gameStatus = iota
-	// action enums
-	NoAction   actionEnum = iota
-	StoneAimed actionEnum = iota
-	StoneHit   actionEnum = iota
-	// magic numbers
-	VelocityDampingFactor   float32 = 0.987
-	VelocityThresholdToStop float32 = 0.07
-	MaxPullLengthAllowed    float32 = 250.0 // TODO: might need to be adjusted based on the dynamic screen size
-	MaxPushVelocityAllowed  float32 = 19.0
-)
 
 type startupConfig struct {
 	fullscreen bool
@@ -119,8 +124,8 @@ func main() {
 		action:          NoAction,
 		startupConfig: startupConfig{
 			fullscreen: true,
-			width:      100,
-			height:     75,
+			width:      640,
+			height:     360,
 		},
 		allParticles: []particle{},
 		allShards:    []shard{},
@@ -220,7 +225,6 @@ func main() {
 					life := (2 * rl.Vector2Length(combinedVelocity)) / MaxPushVelocityAllowed
 
 					collidingPairs = append(collidingPairs, pair{a, b, intersection, life})
-
 				}
 			}
 		}
@@ -230,12 +234,13 @@ func main() {
 			game.hitStoneMoving = nil
 
 			for i := 0.0; i < 100; i += 0.5 {
+				// TODO: shard size should depend on the screen size
 				part := NewShard(
 					p.p,
 					float32(3.6*float32(i)),
-					20*rand.Float32(),
+					MaxParticleSpeed*rand.Float32(),
 					p.life,
-					10*(rand.Float32()+0.5),
+					MaxShardRadius*(rand.Float32()+0.5),
 					rl.NewColor(255, 192, 113, 255),
 				)
 
@@ -298,7 +303,7 @@ func main() {
 					part := NewParticle(
 						stone.pos,
 						float32(angle),
-						20*rand.Float32(),
+						MaxParticleSpeed*rand.Float32(),
 						life,
 						stone.radius*1.02,
 						rocketColor,
@@ -346,28 +351,30 @@ func main() {
 			game.allShards = newShards
 		}
 
-		scoreTeal := 0
-		scorePink := 0
+		{
+			// scoring calculation
+			scoreTeal := 0
+			scorePink := 0
 
-		screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
-		screenRect := rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight))
+			screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
+			screenRect := rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight))
 
-		for _, stone := range game.stones {
-			if !rl.CheckCollisionCircleRec(stone.pos, stone.radius*0.9, screenRect) {
-				fmt.Printf("Stone not in the game: %-v\n", stone.pos)
-				continue
-			}
-			if stone.color == teal {
-				scoreTeal += 1
+			for _, stone := range game.stones {
+				if !rl.CheckCollisionCircleRec(stone.pos, stone.radius*0.9, screenRect) {
+					continue
+				}
+				if stone.color == teal {
+					scoreTeal += 1
+				}
+
+				if stone.color == pinkish {
+					scorePink += 1
+				}
 			}
 
-			if stone.color == pinkish {
-				scorePink += 1
-			}
+			game.score.pink = uint8(scorePink)
+			game.score.teal = uint8(scoreTeal)
 		}
-
-		game.score.pink = uint8(scorePink)
-		game.score.teal = uint8(scoreTeal)
 
 		game.lastTimeUpdated = rl.GetTime()
 	}
@@ -489,6 +496,7 @@ func main() {
 				length := rl.Vector2Length(diff)
 				length = rl.Clamp(length, 0, MaxPullLengthAllowed)
 				normalizedSpeed := length / MaxPullLengthAllowed
+
 				// given the normalized speed, calculate the angle
 				angle := normalizedSpeed * 360.0
 
@@ -510,6 +518,14 @@ func main() {
 			screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
 			game.stones = generateStones(screenWidth, screenHeight)
 			game.status = Initialized
+			// magic numbers
+			// ratio is computed based on 2560 x 1440
+			VelocityDampingFactor = 0.987
+			VelocityThresholdToStop = float32(screenWidth) / 36_000
+			MaxPullLengthAllowed = 0.1 * float32(screenWidth)
+			MaxPushVelocityAllowed = 0.008 * float32(screenWidth)
+			MaxParticleSpeed = 0.008 * float32(screenWidth)
+			MaxShardRadius = float32(screenWidth) / 256
 		}
 
 		handleMouseMove()
