@@ -20,6 +20,7 @@ var VelocityDampingFactor float32
 var VelocityThresholdToStop float32
 var MaxPullLengthAllowed float32
 var MaxPushVelocityAllowed float32
+var StoneRadius float32
 
 // shards and particles
 var MaxParticleSpeed float32
@@ -88,26 +89,40 @@ type game struct {
 	colorTurn       rl.Color
 }
 
+// generates a random formation of 6 stones in a 3x4 matrix
+func generateFormation() [12]bool {
+	a := [12]bool{
+		true, true, true, true, true, true,
+		false, false, false, false, false, false,
+	}
+	rand.Shuffle(12, func(i, j int) { a[i], a[j] = a[j], a[i] })
+	return a
+}
+
 func generateStones(screenWidth, screenHeight int32) []stone {
 	stones := []stone{}
 
 	width := float64(screenWidth)
 	height := float64(screenHeight)
 
-	stoneRadius := float32(screenHeight) * 0.069
+	f1 := generateFormation()
+	f2 := generateFormation()
 
 	for x := 1; x <= 3; x += 1 {
 		for y := 1; y <= 4; y += 1 {
-			if (x == 2 && (y == 1 || y == 4)) || (x == 1 || x == 3) && (y == 2 || y == 3) {
-				continue
-			}
-
 			h := height * float64(y) * 0.2
 
-			w1 := width * float64(x) * 0.125
-			w2 := w1 + width*0.5
+			pos := 3*(y-1) + (x - 1)
 
-			stones = append(stones, newStone(w1, h, teal, stoneRadius), newStone(w2, h, pinkish, stoneRadius))
+			if f1[pos] {
+				w1 := width * float64(x) * 0.125
+				stones = append(stones, newStone(w1, h, teal, StoneRadius))
+			}
+
+			if f2[pos] {
+				w2 := width*float64(x)*0.125 + width*0.5
+				stones = append(stones, newStone(w2, h, pinkish, StoneRadius))
+			}
 		}
 	}
 
@@ -516,8 +531,6 @@ func main() {
 	for !rl.WindowShouldClose() {
 		if game.status == Uninitialized {
 			screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
-			game.stones = generateStones(screenWidth, screenHeight)
-			game.status = Initialized
 			// magic numbers
 			// ratio is computed based on 2560 x 1440
 			VelocityDampingFactor = 0.987
@@ -526,6 +539,10 @@ func main() {
 			MaxPushVelocityAllowed = 0.008 * float32(screenWidth)
 			MaxParticleSpeed = 0.008 * float32(screenWidth)
 			MaxShardRadius = float32(screenWidth) / 256
+			StoneRadius = float32(screenHeight) * 0.069
+			// init
+			game.stones = generateStones(screenWidth, screenHeight)
+			game.status = Initialized
 		}
 
 		handleMouseMove()
