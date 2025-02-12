@@ -30,6 +30,7 @@ const (
 	Uninitialized gameStatus = iota
 	Initialized   gameStatus = iota
 	Stopped       gameStatus = iota
+	GameOver      gameStatus = iota
 	// action enums
 	NoAction   actionEnum = iota
 	StoneAimed actionEnum = iota
@@ -56,13 +57,13 @@ func newStone(w, h float64, color rl.Color, radius float32) stone {
 	}
 }
 
-type startupConfig struct {
+type Window struct {
 	fullscreen bool
 	width      int32
 	height     int32
 }
 
-func (c *startupConfig) GetScreenDimensions() (int32, int32) {
+func (c *Window) GetScreenDimensions() (int32, int32) {
 	if c.fullscreen {
 		w := int32(rl.GetScreenWidth())
 		h := int32(rl.GetScreenHeight())
@@ -77,17 +78,16 @@ type score struct {
 	pink uint8
 }
 
-type game struct {
+type Game struct {
 	status          gameStatus
 	lastTimeUpdated float64
 	stones          []stone
 	selectedStone   *stone
 	hitStoneMoving  *stone
 	action          actionEnum
-	startupConfig   startupConfig
 	allParticles    []particle
 	allShards       []shard
-	score           *score
+	score           score
 	colorTurn       rl.Color
 }
 
@@ -101,8 +101,10 @@ func generateFormation() [12]bool {
 	return a
 }
 
-func generateStones(screenWidth, screenHeight int32) []stone {
+func generateStones(window *Window) []stone {
 	stones := []stone{}
+
+	screenWidth, screenHeight := window.GetScreenDimensions()
 
 	width := float64(screenWidth)
 	height := float64(screenHeight)
@@ -131,35 +133,44 @@ func generateStones(screenWidth, screenHeight int32) []stone {
 	return stones
 }
 
-func main() {
-	game := game{
+func newGame() Game {
+	return Game{
 		status:          Uninitialized,
 		lastTimeUpdated: 0.0,
 		stones:          []stone{},
 		selectedStone:   nil,
 		hitStoneMoving:  nil,
 		action:          NoAction,
-		startupConfig: startupConfig{
-			fullscreen: true,
-			width:      640,
-			height:     360,
-		},
-		allParticles: []particle{},
-		allShards:    []shard{},
-		score: &score{
+		allParticles:    []particle{},
+		allShards:       []shard{},
+		score: score{
 			teal: 6,
 			pink: 6,
 		},
 		colorTurn: teal,
 	}
+}
+
+func (g *Game) init(w *Window) {
+	g.stones = generateStones(w)
+	g.status = Initialized
+}
+
+func main() {
+	window := Window{
+		fullscreen: true,
+		width:      640,
+		height:     360,
+	}
+	game := newGame()
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
 
-	if game.startupConfig.fullscreen {
+	if window.fullscreen {
 		rl.InitWindow(0, 0, "flik")
 		rl.ToggleFullscreen()
 	} else {
-		rl.InitWindow(game.startupConfig.width, game.startupConfig.height, "flik")
+		rl.InitWindow(window.width, window.height, "flik")
 	}
 
 	rl.SetTargetFPS(60)
@@ -274,7 +285,7 @@ func main() {
 			}
 		}
 
-		screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
+		screenWidth, screenHeight := window.GetScreenDimensions()
 		screenRect := rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight))
 
 		newlyDeadStonesIx := []int{}
@@ -413,7 +424,7 @@ func main() {
 			game.allShards = newShards
 		}
 
-		{
+		if game.status == Initialized {
 			// scoring calculation
 			scoreTeal := 0
 			scorePink := 0
@@ -434,6 +445,10 @@ func main() {
 
 			game.score.pink = uint8(scorePink)
 			game.score.teal = uint8(scoreTeal)
+
+			if game.score.pink*game.score.teal == 0 {
+				game.status = GameOver
+			}
 		}
 
 		game.lastTimeUpdated = rl.GetTime()
@@ -468,6 +483,10 @@ func main() {
 		if rl.IsMouseButtonReleased(rl.MouseButtonLeft) && game.action == StoneAimed {
 			game.action = StoneHit
 		}
+
+		if game.status == GameOver && rl.IsKeyDown(rl.KeySpace) {
+			game.status = Uninitialized
+		}
 	}
 
 	drawStone := func(s *stone) {
@@ -500,31 +519,69 @@ func main() {
 
 	}
 
+	drawScore := func(screenWidth, screenHeight int32) {
+		dimmedWhiteColor := rl.NewColor(255, 255, 255, 60)
+
+		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", 600, 0)
+
+		width := (screenWidth/2 - int32(measuredSize.X)) / 2
+		height := (screenHeight - int32(measuredSize.Y)) / 2
+
+		rl.DrawText(fmt.Sprintf("0%d", game.score.teal), width, height, 600, dimmedWhiteColor)
+		rl.DrawText("teal", width+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, 200, dimmedWhiteColor)
+
+		rl.DrawText(fmt.Sprintf("0%d", game.score.pink), screenWidth-width-int32(measuredSize.X), height, 600, dimmedWhiteColor)
+		rl.DrawText("pink", screenWidth-width-int32(measuredSize.X)+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, 200, dimmedWhiteColor)
+	}
+
 	draw := func() {
-		screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
+		screenWidth, screenHeight := window.GetScreenDimensions()
 
 		// draw background
 		rl.ClearBackground(bgColor)
+		if game.status == GameOver {
+			whoWon := "teal won!"
+			if game.score.teal == 0 {
+				whoWon = "pink won!"
+			}
+			measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), whoWon, 200, 10)
+			w := (float32(screenWidth) - measuredSize.X) / 2
+			h := (float32(screenHeight) - measuredSize.Y) / 2
 
-		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", 600, 0)
-		width := (screenWidth/2 - int32(measuredSize.X)) / 2
-		height := (screenHeight - int32(measuredSize.Y)) / 2
-		rl.DrawText(fmt.Sprintf("0%d", game.score.teal), width, height, 600, rl.NewColor(255, 255, 255, 60))
-		rl.DrawText("teal", width+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, 200, rl.NewColor(255, 255, 255, 60))
+			rl.DrawTextEx(
+				rl.GetFontDefault(),
+				whoWon,
+				rl.NewVector2(w, h),
+				200,
+				10,
+				rl.NewColor(255, 255, 255, 60),
+			)
 
-		rl.DrawText(fmt.Sprintf("0%d", game.score.pink), screenWidth-width-int32(measuredSize.X), height, 600, rl.NewColor(255, 255, 255, 60))
-		rl.DrawText("pink", screenWidth-width-int32(measuredSize.X)+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, 200, rl.NewColor(255, 255, 255, 60))
+			message2 := rl.MeasureTextEx(rl.GetFontDefault(), "press space to restart", 50, 10)
+			w = (float32(screenWidth) - message2.X) / 2
+			h = h + measuredSize.Y*1.5
+			rl.DrawTextEx(
+				rl.GetFontDefault(),
+				"press space to restart",
+				rl.NewVector2(w, h),
+				50,
+				10,
+				rl.NewColor(255, 255, 255, 60),
+			)
+		} else {
+			drawScore(screenWidth, screenHeight)
 
-		rl.DrawLineEx(
-			rl.NewVector2(float32(screenWidth/2), 0),
-			rl.NewVector2(float32(screenWidth/2), float32(screenHeight)),
-			10.0,
-			rl.NewColor(255, 255, 255, 125),
-		)
+			rl.DrawLineEx(
+				rl.NewVector2(float32(screenWidth/2), 0),
+				rl.NewVector2(float32(screenWidth/2), float32(screenHeight)),
+				10.0,
+				rl.NewColor(255, 255, 255, 125),
+			)
 
-		for i := 0; i < len(game.stones); i++ {
-			stone := &(game.stones[i])
-			drawStone(stone)
+			for i := 0; i < len(game.stones); i++ {
+				stone := &(game.stones[i])
+				drawStone(stone)
+			}
 		}
 
 		{
@@ -585,7 +642,7 @@ func main() {
 
 	for !rl.WindowShouldClose() {
 		if game.status == Uninitialized {
-			screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
+			screenWidth, screenHeight := window.GetScreenDimensions()
 			// magic numbers
 			// ratio is computed based on 2560 x 1440
 			VelocityDampingFactor = 0.987
@@ -596,10 +653,9 @@ func main() {
 			MaxShardRadius = float32(screenWidth) / 256
 			StoneRadius = float32(screenHeight) * 0.069
 			// init
-			game.stones = generateStones(screenWidth, screenHeight)
-			game.status = Initialized
+			game = newGame()
+			game.init(&window)
 		}
-
 		handleMouseMove()
 
 		update()

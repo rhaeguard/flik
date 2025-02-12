@@ -5,3 +5,4 @@
 - [ ] Introduce a timer for a player to make a move
 - [ ] Introduce a basic AI
 - [x] If a stone is >50% outside of the viewport, it explodes. 
+- [ ] Render text correctly according to the screen size
