@@ -42,6 +42,7 @@ type stone struct {
 	velocity rl.Vector2
 	mass     float32
 	radius   float32
+	isDead   bool
 }
 
 func newStone(w, h float64, color rl.Color, radius float32) stone {
@@ -51,6 +52,7 @@ func newStone(w, h float64, color rl.Color, radius float32) stone {
 		velocity: rl.NewVector2(0, 0),
 		mass:     1,
 		radius:   radius,
+		isDead:   false,
 	}
 }
 
@@ -218,13 +220,21 @@ func main() {
 		seen := map[string]bool{}
 		collidingPairs := []pair{}
 		for i := 0; i < len(game.stones); i++ {
+			a := &game.stones[i]
+			if a.isDead {
+				continue
+			}
 			for j := 0; j < len(game.stones); j++ {
 				if i == j {
 					continue
 				}
 
-				a := &game.stones[i]
 				b := &game.stones[j]
+
+				if b.isDead {
+					continue
+				}
+
 				key := fmt.Sprintf("%d-%d", i, j)
 				if _, ok := seen[key]; ok {
 					continue
@@ -257,16 +267,53 @@ func main() {
 					p.life,
 					MaxShardRadius*(rand.Float32()+0.5),
 					rl.NewColor(255, 192, 113, 255),
+					true,
 				)
 
 				game.allShards = append(game.allShards, part)
 			}
 		}
 
+		screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
+		screenRect := rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight))
+
+		newlyDeadStonesIx := []int{}
+
 		for i := range game.stones {
 			stone := &game.stones[i]
+			if stone.isDead {
+				continue
+			}
 			stone.pos = rl.Vector2Add(stone.pos, stone.velocity)
 			calcVelocity(stone)
+
+			if !rl.CheckCollisionPointRec(stone.pos, screenRect) {
+				stone.isDead = true
+				newlyDeadStonesIx = append(newlyDeadStonesIx, i)
+				if game.hitStoneMoving == stone {
+					game.hitStoneMoving = nil
+				}
+			}
+		}
+
+		{
+			for _, ix := range newlyDeadStonesIx {
+				stone := &game.stones[ix]
+
+				for i := 0.0; i < 300; i += 0.5 {
+					part := NewShard(
+						stone.pos,
+						float32(3.6*float32(i)),
+						MaxParticleSpeed*rand.Float32(),
+						2,
+						MaxShardRadius*(rand.Float32()+0.5),
+						stone.color,
+						false,
+					)
+
+					game.allShards = append(game.allShards, part)
+				}
+			}
 		}
 
 		if game.action == StoneHit {
@@ -371,13 +418,11 @@ func main() {
 			scoreTeal := 0
 			scorePink := 0
 
-			screenWidth, screenHeight := game.startupConfig.GetScreenDimensions()
-			screenRect := rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight))
-
 			for _, stone := range game.stones {
-				if !rl.CheckCollisionCircleRec(stone.pos, stone.radius*0.9, screenRect) {
+				if stone.isDead {
 					continue
 				}
+
 				if stone.color == teal {
 					scoreTeal += 1
 				}
@@ -396,6 +441,9 @@ func main() {
 
 	areStonesStill := func() bool {
 		for _, stone := range game.stones {
+			if stone.isDead {
+				continue
+			}
 			if rl.Vector2Length(stone.velocity) != 0 {
 				return false
 			}
@@ -423,6 +471,9 @@ func main() {
 	}
 
 	drawStone := func(s *stone) {
+		if s.isDead {
+			return
+		}
 		rl.DrawCircleV(s.pos, s.radius, s.color)
 
 		rl.DrawRing(
@@ -488,7 +539,11 @@ func main() {
 		{
 			// draw shards
 			for _, p := range game.allShards {
-				rl.BeginBlendMode(rl.BlendAdditive)
+				mode := rl.BlendAlpha
+				if p.fade {
+					mode = rl.BlendAdditive
+				}
+				rl.BeginBlendMode(mode)
 				p.render()
 				rl.EndBlendMode()
 			}

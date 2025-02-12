@@ -16,6 +16,7 @@ type shard struct {
 	radius     float32
 	angles     []float32
 	polyPoints []rl.Vector2
+	fade       bool
 }
 
 func getPoint(angle float32, eRadius rl.Vector2) rl.Vector2 {
@@ -63,6 +64,7 @@ func NewShard(
 	life float32,
 	radius float32,
 	color rl.Color,
+	fade bool,
 ) shard {
 
 	angleInRadians := float64(angle * rl.Deg2rad)
@@ -78,6 +80,7 @@ func NewShard(
 		color:  color,
 		radius: radius,
 		angles: getAngles(),
+		fade:   fade,
 	}
 }
 
@@ -102,7 +105,7 @@ func (p *shard) update() {
 
 func (p *shard) render() {
 	if p.life > 0 {
-		alpha := 255 * p.life / 2.0
+		alpha := 255.0 * p.life / 2.0
 
 		l := len(p.polyPoints)
 		p0 := p.polyPoints[0]
