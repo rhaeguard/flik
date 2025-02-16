@@ -1,8 +1,10 @@
 - [x] Stones outside of the viewport do not participate in collisions nor stillness check
+- [x] If a stone is >50% outside of the viewport, it explodes. 
 - [ ] Add sound effects
 - [ ] Better stone visuals
 - [ ] Pick an artstyle for this game
 - [ ] Introduce a timer for a player to make a move
 - [ ] Introduce a basic AI
-- [x] If a stone is >50% outside of the viewport, it explodes. 
-- [ ] Render text correctly according to the screen size
+- [ ] Screen size adjustments
+    - [ ] Render text correctly according to the screen size
+    - [ ] Render center line correctly
