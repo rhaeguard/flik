@@ -20,6 +20,15 @@ When me and my brother were little, we used to come up with ideas for different 
 - [ ] Music! Lofi or a bit more energetic?
 - [ ] Allow players to pick avatars and make these avatars say something when they make a good move. You can use the freely available visual novel assets on itch.io. This can also just be a character that represents the game owner or something...like Toasty! from Mortal Kombat.
 
+### Building
+
+For Windows:
+
+```sh
+# from the root of the project
+go build -o bin\ -ldflags "-H=windowsgui" .
+```
+
 #### References
 
 - [vobarian - 2D collision physics article](https://www.vobarian.com/collisions/2dcollisions2.pdf)
