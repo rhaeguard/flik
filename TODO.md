@@ -1,5 +1,6 @@
 - [x] Stones outside of the viewport do not participate in collisions nor stillness check
 - [x] If a stone is >50% outside of the viewport, it explodes. 
+- [x] Fix the entanglement issue
 - [ ] Add sound effects
 - [ ] Better stone visuals
 - [ ] Pick an artstyle for this game

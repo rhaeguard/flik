@@ -177,6 +177,19 @@ func main() {
 
 	defer rl.CloseWindow()
 
+	// do not allow objects to penetrate into each other
+	// this algorithm basically identifies the penetration depth
+	// and moves the objects back half the distance in the direction they are coming in.
+	resolvePenetrationDepth := func(a, b *stone) {
+		direction := rl.Vector2Subtract(a.pos, b.pos)
+		penetrationDepth := (a.radius + b.radius) - rl.Vector2Length(direction)
+
+		direction = rl.Vector2Scale(rl.Vector2Normalize(direction), penetrationDepth/2)
+
+		a.pos = rl.Vector2Add(a.pos, direction)
+		b.pos = rl.Vector2Add(b.pos, rl.Vector2Negate(direction))
+	}
+
 	resolveCollision := func(a, b *stone) {
 		// 1. find unit normal and unit tangent
 		unitNormal := rl.Vector2Normalize(rl.Vector2Subtract(a.pos, b.pos))
@@ -266,6 +279,7 @@ func main() {
 		}
 
 		for _, p := range collidingPairs {
+			resolvePenetrationDepth(p.a, p.b)
 			resolveCollision(p.a, p.b)
 			game.hitStoneMoving = nil
 
