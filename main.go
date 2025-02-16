@@ -307,6 +307,24 @@ func main() {
 			}
 		}
 
+		if game.selectedStone != nil {
+			life := rl.Vector2Distance(rl.GetMousePosition(), game.selectedStone.pos)
+			life = rl.Clamp(MaxPullLengthAllowed, 0, life)
+			life = 0.7 * (life / MaxPullLengthAllowed)
+			for i := 0; i < 360; i += 12 {
+				part := NewParticle(
+					game.selectedStone.pos,
+					rand.Float32()*360,
+					MaxParticleSpeed*rand.Float32(),
+					life,
+					game.selectedStone.radius*0.17,
+					rl.Red,
+				)
+
+				game.allParticles = append(game.allParticles, part)
+			}
+		}
+
 		{
 			for _, ix := range newlyDeadStonesIx {
 				stone := &game.stones[ix]
@@ -616,30 +634,6 @@ func main() {
 				3.0,
 				rl.Yellow,
 			)
-
-			{
-				// TODO: this should not really be calculated here
-				mouseLeftStart := rl.GetMousePosition()
-
-				diff := rl.Vector2Subtract(game.selectedStone.pos, mouseLeftStart)
-
-				length := rl.Vector2Length(diff)
-				length = rl.Clamp(length, 0, MaxPullLengthAllowed)
-				normalizedSpeed := length / MaxPullLengthAllowed
-
-				// given the normalized speed, calculate the angle
-				angle := normalizedSpeed * 360.0
-
-				rl.DrawRing(
-					game.selectedStone.pos,
-					game.selectedStone.radius,
-					game.selectedStone.radius*1.5,
-					0.0,
-					angle,
-					0,
-					rl.NewColor(255, 255, 255, 60),
-				)
-			}
 		}
 	}
 
