@@ -472,6 +472,9 @@ func main() {
 
 		if rl.IsMouseButtonDown(rl.MouseButtonRight) && hasStopped {
 			for i, stone := range game.stones {
+				if stone.isDead {
+					continue
+				}
 				if game.colorTurn == stone.color && rl.CheckCollisionPointCircle(mousePos, stone.pos, stone.radius) {
 					game.selectedStone = &game.stones[i]
 					game.action = StoneAimed
