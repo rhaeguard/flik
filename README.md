@@ -1,5 +1,7 @@
 # flik
 
+https://github.com/user-attachments/assets/ce13eaa1-e275-4290-af31-5df186c0a9ab
+
 ### Idea
 
 When me and my brother were little, we used to come up with ideas for different games with what we had available to us. One of those was a game where the goal was to hit and knock off all caps of the opponent. Those caps were all Coca-Cola, Fanta, Sprite caps which all had their own colors. This game was played on a chessboard.
@@ -12,21 +14,19 @@ When me and my brother were little, we used to come up with ideas for different 
 - You can only hit your own cap
 - Game ends when only one player's caps remain on the board
 
-#### Tasks
+### Running and Building
 
-- [ ] Visualize the board in such a way that it's easier for players to make sense of their situation
-- [ ] Figure out the physics of caps hitting each other in a sort of a chain reaction. Like billiard balls.
-- [ ] Figure out how the players will hit the caps visually. We can start with simply allowing players to set the force. 
-- [ ] Music! Lofi or a bit more energetic?
-- [ ] Allow players to pick avatars and make these avatars say something when they make a good move. You can use the freely available visual novel assets on itch.io. This can also just be a character that represents the game owner or something...like Toasty! from Mortal Kombat.
+On Windows:
 
-### Building
-
-For Windows:
+```sh
+# from the root of the project
+go run .
+```
 
 ```sh
 # from the root of the project
 go build -o bin\ -ldflags "-H=windowsgui" .
+# an exe should be generated in the bin directory 
 ```
 
 #### References

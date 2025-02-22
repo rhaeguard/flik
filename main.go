@@ -159,8 +159,8 @@ func (g *Game) init(w *Window) {
 func main() {
 	window := Window{
 		fullscreen: true,
-		width:      640,
-		height:     360,
+		width:      1920,
+		height:     1080,
 	}
 	game := newGame()
 

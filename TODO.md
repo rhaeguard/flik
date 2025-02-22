@@ -9,3 +9,5 @@
 - [ ] Screen size adjustments
     - [ ] Render text correctly according to the screen size
     - [ ] Render center line correctly
+- [ ] Music! Lofi or a bit more energetic?
+- [ ] Allow players to pick avatars and make these avatars say something when they make a good move. You can use the freely available visual novel assets on itch.io. This can also just be a character that represents the game owner or something...like Toasty! from Mortal Kombat.
