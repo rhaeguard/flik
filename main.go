@@ -43,16 +43,18 @@ type stone struct {
 	velocity rl.Vector2
 	mass     float32
 	radius   float32
+	life     float32
 	isDead   bool
 }
 
-func newStone(w, h float64, color rl.Color, radius float32) stone {
+func newStone(w, h float64, color rl.Color, radius, mass float32) stone {
 	return stone{
 		pos:      rl.NewVector2(float32(w), float32(h)),
 		color:    color,
 		velocity: rl.NewVector2(0, 0),
-		mass:     1,
+		mass:     mass,
 		radius:   radius,
+		life:     100,
 		isDead:   false,
 	}
 }
@@ -120,12 +122,12 @@ func generateStones(window *Window) []stone {
 
 			if f1[pos] {
 				w1 := width * float64(x) * 0.125
-				stones = append(stones, newStone(w1, h, teal, StoneRadius))
+				stones = append(stones, newStone(w1, h, teal, StoneRadius, 1))
 			}
 
 			if f2[pos] {
 				w2 := width*float64(x)*0.125 + width*0.5
-				stones = append(stones, newStone(w2, h, pinkish, StoneRadius))
+				stones = append(stones, newStone(w2, h, pinkish, StoneRadius, 1))
 			}
 		}
 	}
@@ -279,9 +281,21 @@ func main() {
 		}
 
 		for _, p := range collidingPairs {
+			speedDiff := rl.Vector2Length(rl.Vector2Subtract(p.a.velocity, p.b.velocity))
+			aIsFaster := rl.Vector2Length(p.a.velocity) > rl.Vector2Length(p.b.velocity)
+			amount := rl.Clamp(speedDiff, 0, MaxPushVelocityAllowed) * 2
+
 			resolvePenetrationDepth(p.a, p.b)
 			resolveCollision(p.a, p.b)
 			game.hitStoneMoving = nil
+
+			if aIsFaster {
+				p.b.life -= amount
+				p.a.life -= amount * 0.2
+			} else {
+				p.a.life -= amount
+				p.b.life -= amount * 0.2
+			}
 
 			for i := 0.0; i < 100; i += 0.5 {
 				// TODO: shard size should depend on the screen size
@@ -312,7 +326,7 @@ func main() {
 			stone.pos = rl.Vector2Add(stone.pos, stone.velocity)
 			calcVelocity(stone)
 
-			if !rl.CheckCollisionPointRec(stone.pos, screenRect) {
+			if !rl.CheckCollisionPointRec(stone.pos, screenRect) || stone.life <= 0 {
 				stone.isDead = true
 				newlyDeadStonesIx = append(newlyDeadStonesIx, i)
 				if game.hitStoneMoving == stone {
@@ -530,6 +544,7 @@ func main() {
 		}
 		rl.DrawCircleV(s.pos, s.radius, s.color)
 
+		// the outer/border ring
 		rl.DrawRing(
 			s.pos,
 			s.radius*0.8,
@@ -541,6 +556,7 @@ func main() {
 		)
 
 		if s.color == game.colorTurn {
+			// the "active player" ring
 			rl.DrawRing(
 				s.pos,
 				s.radius*0.2,
@@ -552,6 +568,15 @@ func main() {
 			)
 		}
 
+		rl.DrawRing(
+			s.pos,
+			s.radius*0.5,
+			s.radius*0.8,
+			0.0,
+			360.0*float32(s.life)/100,
+			0,
+			rl.Green,
+		)
 	}
 
 	drawScore := func(screenWidth, screenHeight int32) {
@@ -613,7 +638,7 @@ func main() {
 				rl.NewColor(255, 255, 255, 125),
 			)
 
-			for i := 0; i < len(game.stones); i++ {
+			for i := range game.stones {
 				stone := &(game.stones[i])
 				drawStone(stone)
 			}
@@ -657,12 +682,12 @@ func main() {
 			// magic numbers
 			// ratio is computed based on 2560 x 1440
 			VelocityDampingFactor = 0.987
-			VelocityThresholdToStop = float32(screenWidth) / 36_000
+			VelocityThresholdToStop = float32(screenWidth) / 6_000
 			MaxPullLengthAllowed = 0.1 * float32(screenWidth)
 			MaxPushVelocityAllowed = 0.008 * float32(screenWidth)
 			MaxParticleSpeed = 0.008 * float32(screenWidth)
 			MaxShardRadius = float32(screenWidth) / 256
-			StoneRadius = float32(screenHeight) * 0.069
+			StoneRadius = float32(screenHeight) * 0.06
 			// init
 			game = newGame()
 			game.init(&window)
