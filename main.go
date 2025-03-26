@@ -81,16 +81,17 @@ type score struct {
 }
 
 type Game struct {
-	status          gameStatus
-	lastTimeUpdated float64
-	stones          []stone
-	selectedStone   *stone
-	hitStoneMoving  *stone
-	action          actionEnum
-	allParticles    []particle
-	allShards       []shard
-	score           score
-	colorTurn       rl.Color
+	status                         gameStatus
+	lastTimeUpdated                float64
+	stones                         []stone
+	selectedStone                  *stone
+	selectedStoneRotAnimationAngle float32
+	hitStoneMoving                 *stone
+	action                         actionEnum
+	allParticles                   []particle
+	allShards                      []shard
+	score                          score
+	colorTurn                      rl.Color
 }
 
 // generates a random formation of 6 stones in a 3x4 matrix
@@ -137,14 +138,15 @@ func generateStones(window *Window) []stone {
 
 func newGame() Game {
 	return Game{
-		status:          Uninitialized,
-		lastTimeUpdated: 0.0,
-		stones:          []stone{},
-		selectedStone:   nil,
-		hitStoneMoving:  nil,
-		action:          NoAction,
-		allParticles:    []particle{},
-		allShards:       []shard{},
+		status:                         Uninitialized,
+		lastTimeUpdated:                0.0,
+		stones:                         []stone{},
+		selectedStone:                  nil,
+		selectedStoneRotAnimationAngle: 0.0,
+		hitStoneMoving:                 nil,
+		action:                         NoAction,
+		allParticles:                   []particle{},
+		allShards:                      []shard{},
 		score: score{
 			teal: 6,
 			pink: 6,
@@ -336,21 +338,9 @@ func main() {
 		}
 
 		if game.selectedStone != nil {
-			life := rl.Vector2Distance(rl.GetMousePosition(), game.selectedStone.pos)
-			life = rl.Clamp(MaxPullLengthAllowed, 0, life)
-			life = 0.7 * (life / MaxPullLengthAllowed)
-			for i := 0; i < 360; i += 12 {
-				part := NewParticle(
-					game.selectedStone.pos,
-					rand.Float32()*360,
-					MaxParticleSpeed*rand.Float32(),
-					life,
-					game.selectedStone.radius*0.17,
-					rl.Red,
-				)
-
-				game.allParticles = append(game.allParticles, part)
-			}
+			strength := rl.Vector2Distance(rl.GetMousePosition(), game.selectedStone.pos)
+			strength = rl.Clamp(MaxPullLengthAllowed, 0, strength) * 3
+			game.selectedStoneRotAnimationAngle += rl.GetFrameTime() * strength
 		}
 
 		{
@@ -577,6 +567,30 @@ func main() {
 			0,
 			rl.Green,
 		)
+
+		if game.selectedStone == s {
+			// this section draws the spinning wheel
+			// when the player is aiming
+			rl.DrawRing(
+				s.pos,
+				s.radius*1.1,
+				s.radius*1.5,
+				0.0,
+				360.0,
+				0,
+				rl.NewColor(255, 255, 255, 50),
+			)
+
+			rl.DrawRing(
+				s.pos,
+				s.radius*1.1,
+				s.radius*1.5,
+				0.0+game.selectedStoneRotAnimationAngle,
+				40.0+game.selectedStoneRotAnimationAngle,
+				0,
+				rl.NewColor(255, 255, 255, 100),
+			)
+		}
 	}
 
 	drawScore := func(screenWidth, screenHeight int32) {
