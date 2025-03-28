@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -11,6 +12,7 @@ var bgColor = rl.NewColor(139, 212, 195, 255)
 var teal = rl.NewColor(80, 114, 137, 255)
 var tealDarker = rl.NewColor(28, 71, 99, 255)
 var pinkish = rl.NewColor(255, 211, 193, 255)
+var shardCollisionColor = rl.NewColor(255, 192, 113, 255)
 
 type gameStatus = int8
 type actionEnum = int8
@@ -47,6 +49,10 @@ type stone struct {
 	isDead   bool
 }
 
+func dimWhite(alpha uint8) color.RGBA {
+	return rl.NewColor(255, 255, 255, alpha)
+}
+
 func newStone(w, h float64, color rl.Color, radius, mass float32) stone {
 	return stone{
 		pos:      rl.NewVector2(float32(w), float32(h)),
@@ -80,6 +86,12 @@ type score struct {
 	pink uint8
 }
 
+type zoomAnimation struct {
+	target rl.Vector2
+	zoom   float32
+	done   bool
+}
+
 type Game struct {
 	status                         gameStatus
 	lastTimeUpdated                float64
@@ -92,6 +104,7 @@ type Game struct {
 	allShards                      []shard
 	score                          score
 	colorTurn                      rl.Color
+	zoomAnimation                  zoomAnimation
 }
 
 // generates a random formation of 6 stones in a 3x4 matrix
@@ -151,7 +164,8 @@ func newGame() Game {
 			teal: 6,
 			pink: 6,
 		},
-		colorTurn: teal,
+		colorTurn:     teal,
+		zoomAnimation: zoomAnimation{},
 	}
 }
 
@@ -162,9 +176,9 @@ func (g *Game) init(w *Window) {
 
 func main() {
 	window := Window{
-		fullscreen: true,
-		width:      1920,
-		height:     1080,
+		fullscreen: !true,
+		width:      1280,
+		height:     720,
 	}
 	game := newGame()
 
@@ -178,6 +192,8 @@ func main() {
 	}
 
 	rl.SetTargetFPS(60)
+
+	camera := rl.NewCamera2D(rl.NewVector2(0, 0), rl.NewVector2(0, 0), 0, 1)
 
 	defer rl.CloseWindow()
 
@@ -307,7 +323,7 @@ func main() {
 					MaxParticleSpeed*rand.Float32(),
 					p.life,
 					MaxShardRadius*(rand.Float32()+0.5),
-					rl.NewColor(255, 192, 113, 255),
+					shardCollisionColor,
 					true,
 				)
 
@@ -382,6 +398,7 @@ func main() {
 			game.action = NoAction
 			game.hitStoneMoving = game.selectedStone
 			game.selectedStone = nil
+			game.selectedStoneRotAnimationAngle = 0
 			if game.colorTurn == teal {
 				game.colorTurn = pinkish
 			} else {
@@ -578,7 +595,7 @@ func main() {
 				0.0,
 				360.0,
 				0,
-				rl.NewColor(255, 255, 255, 50),
+				dimWhite(50),
 			)
 
 			rl.DrawRing(
@@ -588,13 +605,13 @@ func main() {
 				0.0+game.selectedStoneRotAnimationAngle,
 				40.0+game.selectedStoneRotAnimationAngle,
 				0,
-				rl.NewColor(255, 255, 255, 100),
+				dimWhite(100),
 			)
 		}
 	}
 
 	drawScore := func(screenWidth, screenHeight int32) {
-		dimmedWhiteColor := rl.NewColor(255, 255, 255, 60)
+		dimmedWhiteColor := dimWhite(60)
 
 		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", 600, 0)
 
@@ -611,8 +628,6 @@ func main() {
 	draw := func() {
 		screenWidth, screenHeight := window.GetScreenDimensions()
 
-		// draw background
-		rl.ClearBackground(bgColor)
 		if game.status == GameOver {
 			whoWon := "teal won!"
 			if game.score.teal == 0 {
@@ -628,7 +643,7 @@ func main() {
 				rl.NewVector2(w, h),
 				200,
 				10,
-				rl.NewColor(255, 255, 255, 60),
+				dimWhite(60),
 			)
 
 			message2 := rl.MeasureTextEx(rl.GetFontDefault(), "press space to restart", 50, 10)
@@ -640,7 +655,7 @@ func main() {
 				rl.NewVector2(w, h),
 				50,
 				10,
-				rl.NewColor(255, 255, 255, 60),
+				dimWhite(60),
 			)
 		} else {
 			drawScore(screenWidth, screenHeight)
@@ -649,7 +664,7 @@ func main() {
 				rl.NewVector2(float32(screenWidth/2), 0),
 				rl.NewVector2(float32(screenWidth/2), float32(screenHeight)),
 				10.0,
-				rl.NewColor(255, 255, 255, 125),
+				dimWhite(125),
 			)
 
 			for i := range game.stones {
@@ -712,7 +727,14 @@ func main() {
 
 		rl.BeginDrawing()
 
+		// draw background
+		rl.ClearBackground(bgColor)
+
+		rl.BeginMode2D(camera)
+
 		draw()
+
+		rl.EndMode2D()
 
 		rl.EndDrawing()
 	}
