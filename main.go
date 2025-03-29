@@ -16,6 +16,7 @@ var shardCollisionColor = rl.NewColor(255, 192, 113, 255)
 
 type gameStatus = int8
 type actionEnum = int8
+type player = int8
 
 // magic numbers
 var VelocityDampingFactor float32
@@ -37,6 +38,9 @@ const (
 	NoAction   actionEnum = iota
 	StoneAimed actionEnum = iota
 	StoneHit   actionEnum = iota
+	// player turn
+	PlayerOne player = iota
+	PlayerTwo player = iota
 )
 
 type stone struct {
@@ -47,13 +51,14 @@ type stone struct {
 	radius   float32
 	life     float32
 	isDead   bool
+	playerId player
 }
 
 func dimWhite(alpha uint8) color.RGBA {
 	return rl.NewColor(255, 255, 255, alpha)
 }
 
-func newStone(w, h float64, color rl.Color, radius, mass float32) stone {
+func newStone(w, h float64, color rl.Color, radius, mass float32, p player) stone {
 	return stone{
 		pos:      rl.NewVector2(float32(w), float32(h)),
 		color:    color,
@@ -62,6 +67,7 @@ func newStone(w, h float64, color rl.Color, radius, mass float32) stone {
 		radius:   radius,
 		life:     100,
 		isDead:   false,
+		playerId: p,
 	}
 }
 
@@ -103,7 +109,7 @@ type Game struct {
 	allParticles                   []particle
 	allShards                      []shard
 	score                          score
-	colorTurn                      rl.Color
+	playerTurn                     player
 	zoomAnimation                  zoomAnimation
 }
 
@@ -136,12 +142,12 @@ func generateStones(window *Window) []stone {
 
 			if f1[pos] {
 				w1 := width * float64(x) * 0.125
-				stones = append(stones, newStone(w1, h, teal, StoneRadius, 1))
+				stones = append(stones, newStone(w1, h, teal, StoneRadius, 1, PlayerOne))
 			}
 
 			if f2[pos] {
 				w2 := width*float64(x)*0.125 + width*0.5
-				stones = append(stones, newStone(w2, h, pinkish, StoneRadius, 1))
+				stones = append(stones, newStone(w2, h, pinkish, StoneRadius, 1, PlayerTwo))
 			}
 		}
 	}
@@ -164,7 +170,7 @@ func newGame() Game {
 			teal: 6,
 			pink: 6,
 		},
-		colorTurn:     teal,
+		playerTurn:    PlayerOne,
 		zoomAnimation: zoomAnimation{},
 	}
 }
@@ -399,10 +405,10 @@ func main() {
 			game.hitStoneMoving = game.selectedStone
 			game.selectedStone = nil
 			game.selectedStoneRotAnimationAngle = 0
-			if game.colorTurn == teal {
-				game.colorTurn = pinkish
+			if game.playerTurn == PlayerOne {
+				game.playerTurn = PlayerTwo
 			} else {
-				game.colorTurn = teal
+				game.playerTurn = PlayerOne
 			}
 		}
 
@@ -528,7 +534,7 @@ func main() {
 				if stone.isDead {
 					continue
 				}
-				if game.colorTurn == stone.color && rl.CheckCollisionPointCircle(mousePos, stone.pos, stone.radius) {
+				if game.playerTurn == stone.playerId && rl.CheckCollisionPointCircle(mousePos, stone.pos, stone.radius) {
 					game.selectedStone = &game.stones[i]
 					game.action = StoneAimed
 					break
@@ -562,7 +568,7 @@ func main() {
 			tealDarker,
 		)
 
-		if s.color == game.colorTurn {
+		if s.playerId == game.playerTurn {
 			// the "active player" ring
 			rl.DrawRing(
 				s.pos,
