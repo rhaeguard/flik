@@ -92,12 +92,6 @@ type score struct {
 	pink uint8
 }
 
-type zoomAnimation struct {
-	target rl.Vector2
-	zoom   float32
-	done   bool
-}
-
 type Game struct {
 	status                         gameStatus
 	lastTimeUpdated                float64
@@ -110,7 +104,6 @@ type Game struct {
 	allShards                      []shard
 	score                          score
 	playerTurn                     player
-	zoomAnimation                  zoomAnimation
 }
 
 // generates a random formation of 6 stones in a 3x4 matrix
@@ -170,8 +163,7 @@ func newGame() Game {
 			teal: 6,
 			pink: 6,
 		},
-		playerTurn:    PlayerOne,
-		zoomAnimation: zoomAnimation{},
+		playerTurn: PlayerOne,
 	}
 }
 
