@@ -27,6 +27,7 @@ var VelocityThresholdToStop float32
 var MaxPullLengthAllowed float32
 var MaxPushVelocityAllowed float32
 var StoneRadius float32
+var FontSize float32
 
 // shards and particles
 var MaxParticleSpeed float32
@@ -761,27 +762,25 @@ func main() {
 	drawScore := func(screenWidth, screenHeight int32) {
 		dimmedWhiteColor := dimWhite(60)
 
-		fontSize := int32(600)
-
-		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", float32(fontSize), 0)
+		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", FontSize, 0)
 
 		width := (screenWidth/2 - int32(measuredSize.X)) / 2
 		height := (screenHeight - int32(measuredSize.Y)) / 2
 
-		rl.DrawText(fmt.Sprintf("0%d", game.score.playerOne), width, height, fontSize, dimmedWhiteColor)
-		rl.DrawText("teal", width+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, 200, dimmedWhiteColor)
+		rl.DrawText(fmt.Sprintf("0%d", game.score.playerOne), width, height, int32(FontSize), dimmedWhiteColor)
+		rl.DrawText("you", width+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, int32(FontSize)/3, dimmedWhiteColor)
 
-		rl.DrawText(fmt.Sprintf("0%d", game.score.playerTwo), screenWidth-width-int32(measuredSize.X), height, fontSize, dimmedWhiteColor)
-		rl.DrawText("pink", screenWidth-width-int32(measuredSize.X)+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, 200, dimmedWhiteColor)
+		rl.DrawText(fmt.Sprintf("0%d", game.score.playerTwo), screenWidth-width-int32(measuredSize.X), height, int32(FontSize), dimmedWhiteColor)
+		rl.DrawText("cpu", screenWidth-width-int32(measuredSize.X)+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, int32(FontSize)/3, dimmedWhiteColor)
 	}
 
 	draw := func() {
 		screenWidth, screenHeight := window.GetScreenDimensions()
 
 		if game.status == GameOver {
-			whoWon := "p1 won!"
+			whoWon := "you won!"
 			if game.score.playerOne == 0 {
-				whoWon = "p2 won!"
+				whoWon = "cpu won!"
 			}
 			measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), whoWon, 200, 10)
 			w := (float32(screenWidth) - measuredSize.X) / 2
@@ -867,6 +866,7 @@ func main() {
 			MaxParticleSpeed = 0.008 * float32(screenWidth)
 			MaxShardRadius = float32(screenWidth) / 256
 			StoneRadius = float32(screenHeight) * 0.06
+			FontSize = float32(screenWidth) * 0.25
 			// init
 			game = newGame()
 			game.init(&window)
