@@ -540,7 +540,6 @@ func main() {
 
 	handleMouseMove := func() {
 		game.stoneHitPosition = rl.GetMousePosition()
-		// hasStopped := areStonesStill()
 
 		if rl.IsMouseButtonDown(rl.MouseButtonRight) && game.stonesAreStill {
 			for i, stone := range game.stones {
@@ -756,24 +755,6 @@ func main() {
 			0,
 			rl.Green,
 		)
-
-		// if game.selectedStone == s {
-		// 	// this section draws the spinning wheel
-		// 	// when the player is aiming
-		// 	rl.DrawRing(
-		// 		s.pos,
-		// 		s.radius*1.1,
-		// 		s.radius*1.5,
-		// 		0.0,
-		// 		360.0,
-		// 		0,
-		// 		dimWhite(50),
-		// 	)
-
-		// }
-
-		// draw the ids
-		// rl.DrawText(fmt.Sprintf("%d", s.id), int32(s.pos.X), int32(s.pos.Y), 32, rl.Black)
 	}
 
 	drawScore := func(screenWidth, screenHeight float32) {
