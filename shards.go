@@ -8,7 +8,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-type shard struct {
+type Shard struct {
 	pos        rl.Vector2
 	velocity   rl.Vector2
 	life       float32
@@ -65,13 +65,13 @@ func NewShard(
 	radius float32,
 	color rl.Color,
 	fade bool,
-) shard {
+) Shard {
 
 	angleInRadians := float64(angle * rl.Deg2rad)
 	vx := float32(math.Cos(angleInRadians)) * speed
 	vy := -float32(math.Sin(angleInRadians)) * speed
 
-	return shard{
+	return Shard{
 		pos:  pos,
 		life: life,
 		velocity: rl.NewVector2(
@@ -84,7 +84,7 @@ func NewShard(
 	}
 }
 
-func (p *shard) update() {
+func (p *Shard) update() {
 	p.life -= 0.0167 * 2
 
 	if p.life > 0 {
@@ -103,7 +103,7 @@ func (p *shard) update() {
 	}
 }
 
-func (p *shard) render() {
+func (p *Shard) render() {
 	if p.life > 0 {
 		alpha := 255.0 * p.life / 2.0
 

@@ -117,8 +117,8 @@ type Game struct {
 	aimVectorStart                 rl.Vector2
 	aimVectorForwardExtensionEnd   rl.Vector2
 	action                         ActionEnum
-	allParticles                   []particle
-	allShards                      []shard
+	allParticles                   []Particle
+	allShards                      []Shard
 	score                          map[Player]uint8
 	playerTurn                     Player
 	stonesAreStill                 bool
@@ -178,8 +178,8 @@ func newGame() Game {
 		selectedStoneRotAnimationAngle: 0.0,
 		hitStoneMoving:                 nil,
 		action:                         NoAction,
-		allParticles:                   []particle{},
-		allShards:                      []shard{},
+		allParticles:                   []Particle{},
+		allShards:                      []Shard{},
 		score: map[Player]uint8{
 			PlayerOne: 6,
 			PlayerTwo: 6,
@@ -490,7 +490,7 @@ func main() {
 
 		{
 			// filter out the dead particles
-			newAllParticles := []particle{}
+			newAllParticles := []Particle{}
 			for _, p := range game.allParticles {
 				if p.life > 0 {
 					newAllParticles = append(newAllParticles, p)
@@ -502,7 +502,7 @@ func main() {
 
 		{
 			// filter out the dead shards
-			newShards := []shard{}
+			newShards := []Shard{}
 			for _, p := range game.allShards {
 				if p.life > 0 {
 					newShards = append(newShards, p)
