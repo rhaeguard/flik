@@ -6,6 +6,11 @@
     - [x] Render text correctly according to the screen size
     - [x] Render center line correctly (maybe just MacOS issue?)
 - [ ] Levels!
+    - [ ] Survival Mode: try to beat as many regenerating stones as possible.
+    - [ ] Time Limit Mode: the player with the most stones wins (if tie, look into life pts, proximity to the border, etc.)
+    - [ ] Bordered Mode: the stones do not leave the game, they deflect off of the borders.
+    - [ ] Dynamic Obstacles: the field will have moving elements that will cause deflections
+    - [ ] Dynamic Obstacles: some stones will randomly be unplayable for a turn
 - [ ] Add sound effects
 - [ ] Better stone visuals
 - [ ] Pick an artstyle for this game
