@@ -15,9 +15,9 @@ var BG_COLOR = rl.NewColor(139, 212, 195, 255)
 var STONE_COLLISION_SHARD_COLOR = rl.NewColor(255, 192, 113, 255)
 var AIM_VECTOR_COLOR = rl.Yellow
 
-type gameStatus = int8
-type actionEnum = int8
-type player = int8
+type GameStatus = int8
+type ActionEnum = int8
+type Player = int8
 
 // magic numbers
 var VelocityDampingFactor float32
@@ -32,17 +32,17 @@ var MaxParticleSpeed float32
 var MaxShardRadius float32
 
 const (
-	Uninitialized gameStatus = iota
-	Initialized   gameStatus = iota
-	Stopped       gameStatus = iota
-	GameOver      gameStatus = iota
+	Uninitialized GameStatus = iota
+	Initialized   GameStatus = iota
+	Stopped       GameStatus = iota
+	GameOver      GameStatus = iota
 	// action enums
-	NoAction   actionEnum = iota
-	StoneAimed actionEnum = iota
-	StoneHit   actionEnum = iota
+	NoAction   ActionEnum = iota
+	StoneAimed ActionEnum = iota
+	StoneHit   ActionEnum = iota
 	// player turn
-	PlayerOne player = iota
-	PlayerTwo player = iota
+	PlayerOne Player = iota
+	PlayerTwo Player = iota
 )
 
 type PlayerSettings struct {
@@ -75,7 +75,7 @@ func (c *Window) GetScreenDiagonal() float32 {
 	return float32(res)
 }
 
-type stone struct {
+type Stone struct {
 	id       int
 	pos      rl.Vector2
 	velocity rl.Vector2
@@ -83,19 +83,19 @@ type stone struct {
 	radius   float32
 	life     float32
 	isDead   bool
-	playerId player
+	playerId Player
 }
 
-func newStone(id int, w, h float64, radius, mass float32, p player) stone {
-	return stone{
-		id:       id,
-		pos:      rl.NewVector2(float32(w), float32(h)),
+func newStone(stoneId int, x, y float64, radius, mass float32, playerId Player) Stone {
+	return Stone{
+		id:       stoneId,
+		pos:      rl.NewVector2(float32(x), float32(y)),
 		velocity: rl.NewVector2(0, 0),
 		mass:     mass,
 		radius:   radius,
 		life:     100,
 		isDead:   false,
-		playerId: p,
+		playerId: playerId,
 	}
 }
 
@@ -104,21 +104,21 @@ func dimWhite(alpha uint8) color.RGBA {
 }
 
 type Game struct {
-	status                         gameStatus
+	status                         GameStatus
 	lastTimeUpdated                float64
 	totalTimeRunning               float32
-	stones                         []stone
-	selectedStone                  *stone
+	stones                         []Stone
+	selectedStone                  *Stone
 	selectedStoneRotAnimationAngle float32
-	hitStoneMoving                 *stone
+	hitStoneMoving                 *Stone
 	stoneHitPosition               rl.Vector2
-	action                         actionEnum
+	action                         ActionEnum
 	allParticles                   []particle
 	allShards                      []shard
-	score                          map[player]uint8
-	playerTurn                     player
+	score                          map[Player]uint8
+	playerTurn                     Player
 	stonesAreStill                 bool
-	playerSettings                 map[player]PlayerSettings
+	playerSettings                 map[Player]PlayerSettings
 }
 
 // generates a random formation of 6 stones in a 3x4 matrix
@@ -131,8 +131,8 @@ func generateFormation() [12]bool {
 	return a
 }
 
-func generateStones(window *Window) []stone {
-	stones := []stone{}
+func generateStones(window *Window) []Stone {
+	stones := []Stone{}
 
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
@@ -172,20 +172,20 @@ func newGame() Game {
 		status:                         Uninitialized,
 		lastTimeUpdated:                0.0,
 		totalTimeRunning:               0.0,
-		stones:                         []stone{},
+		stones:                         []Stone{},
 		selectedStone:                  nil,
 		selectedStoneRotAnimationAngle: 0.0,
 		hitStoneMoving:                 nil,
 		action:                         NoAction,
 		allParticles:                   []particle{},
 		allShards:                      []shard{},
-		score: map[player]uint8{
+		score: map[Player]uint8{
 			PlayerOne: 6,
 			PlayerTwo: 6,
 		},
 		playerTurn:     PlayerOne,
 		stonesAreStill: true,
-		playerSettings: map[player]PlayerSettings{
+		playerSettings: map[Player]PlayerSettings{
 			PlayerOne: {
 				label:          "you",
 				primaryColor:   rl.NewColor(55, 113, 142, 255),
@@ -233,7 +233,7 @@ func main() {
 	// do not allow objects to penetrate into each other
 	// this algorithm basically identifies the penetration depth
 	// and moves the objects back half the distance in the direction they are coming in.
-	resolvePenetrationDepth := func(a, b *stone) {
+	resolvePenetrationDepth := func(a, b *Stone) {
 		direction := rl.Vector2Subtract(a.pos, b.pos)
 		penetrationDepth := (a.radius + b.radius) - rl.Vector2Length(direction)
 
@@ -243,7 +243,7 @@ func main() {
 		b.pos = rl.Vector2Add(b.pos, rl.Vector2Negate(direction))
 	}
 
-	resolveCollision := func(a, b *stone) {
+	resolveCollision := func(a, b *Stone) {
 		// 1. find unit normal and unit tangent
 		unitNormal := rl.Vector2Normalize(rl.Vector2Subtract(a.pos, b.pos))
 		unitTangent := rl.NewVector2(-unitNormal.Y, unitNormal.X)
@@ -280,7 +280,7 @@ func main() {
 		b.velocity = vbV
 	}
 
-	calcVelocity := func(s *stone) {
+	calcVelocity := func(s *Stone) {
 		s.velocity = rl.Vector2Scale(s.velocity, VelocityDampingFactor)
 		if rl.Vector2Length(s.velocity) < VelocityThresholdToStop {
 			s.velocity.X = 0
@@ -288,14 +288,14 @@ func main() {
 		}
 	}
 
-	type pair struct {
-		a, b *stone
-		p    rl.Vector2
-		life float32
+	type collisionPair struct {
+		a, b           *Stone
+		collisionPoint rl.Vector2
+		magnitude      float32
 	}
 	update := func() {
 		seen := map[string]bool{}
-		collidingPairs := []pair{}
+		collidingPairs := []collisionPair{}
 		for i := range game.stones {
 			a := &game.stones[i]
 			if a.isDead {
@@ -320,13 +320,13 @@ func main() {
 				if rl.CheckCollisionCircles(a.pos, a.radius, b.pos, b.radius) {
 					seen[fmt.Sprintf("%d-%d", i, j)] = true
 					seen[fmt.Sprintf("%d-%d", j, i)] = true
-					intersection := circleIntersectionPoint(a, b)
+					intersection := rl.Vector2Scale(rl.Vector2Add(a.pos, b.pos), 0.5)
 
 					combinedVelocity := rl.Vector2Add(a.velocity, b.velocity)
 
-					life := (2 * rl.Vector2Length(combinedVelocity)) / MaxPushVelocityAllowed
+					collisionMagnitude := (2 * rl.Vector2Length(combinedVelocity)) / MaxPushVelocityAllowed
 
-					collidingPairs = append(collidingPairs, pair{a, b, intersection, life})
+					collidingPairs = append(collidingPairs, collisionPair{a, b, intersection, collisionMagnitude})
 				}
 			}
 		}
@@ -351,10 +351,10 @@ func main() {
 			for i := 0.0; i < 100; i += 0.5 {
 				// TODO: shard size should depend on the screen size
 				part := NewShard(
-					p.p,
+					p.collisionPoint,
 					float32(3.6*float32(i)),
 					MaxParticleSpeed*rand.Float32(),
-					p.life,
+					p.magnitude,
 					MaxShardRadius*(rand.Float32()+0.5),
 					STONE_COLLISION_SHARD_COLOR,
 					true,
@@ -578,7 +578,7 @@ func main() {
 	}
 
 	type searchPair struct {
-		actor, target *stone
+		actor, target *Stone
 		score         float32
 	}
 
@@ -593,7 +593,7 @@ func main() {
 	/// - life state of the hitting stone
 	/// - whether own stone will be hit in the process
 	/// - whether stone will richochet
-	cpuSearchBestOption := func() (*stone, *stone) {
+	cpuSearchBestOption := func() (*Stone, *Stone) {
 		searchPairs := []searchPair{}
 		for i := range game.stones {
 			actor := &game.stones[i]
@@ -707,7 +707,7 @@ func main() {
 		game.stoneHitPosition = rl.Vector2Add(actor.pos, rl.Vector2Negate(rl.Vector2Subtract(target.pos, actor.pos)))
 	}
 
-	drawStone := func(s *stone) {
+	drawStone := func(s *Stone) {
 		if s.isDead {
 			return
 		}
