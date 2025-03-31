@@ -12,10 +12,6 @@ import (
 )
 
 var BG_COLOR = rl.NewColor(139, 212, 195, 255)
-
-var TEAL = rl.NewColor(80, 114, 137, 255)
-var DARKER_TEAL = rl.NewColor(28, 71, 99, 255)
-var PINKISH = rl.NewColor(255, 211, 193, 255)
 var STONE_COLLISION_SHARD_COLOR = rl.NewColor(255, 192, 113, 255)
 var AIM_VECTOR_COLOR = rl.Yellow
 
@@ -192,17 +188,17 @@ func newGame() Game {
 		playerSettings: map[player]PlayerSettings{
 			PlayerOne: {
 				label:          "you",
-				primaryColor:   TEAL,
-				outerRingColor: DARKER_TEAL,
-				lifeColor:      rl.Green,
+				primaryColor:   rl.NewColor(55, 113, 142, 255),
+				outerRingColor: rl.NewColor(37, 78, 112, 255),
+				lifeColor:      rl.NewColor(255, 250, 255, 255),
 				rocketColor:    rl.SkyBlue,
 			},
 			PlayerTwo: {
 				label:          "cpu",
-				primaryColor:   PINKISH,
-				outerRingColor: DARKER_TEAL,
-				lifeColor:      rl.Green,
-				rocketColor:    rl.Red,
+				primaryColor:   rl.NewColor(133, 90, 92, 255),
+				outerRingColor: rl.NewColor(102, 16, 31, 255),
+				lifeColor:      rl.NewColor(255, 250, 255, 255),
+				rocketColor:    rl.NewColor(129, 13, 32, 255),
 			},
 		},
 	}
