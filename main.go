@@ -840,7 +840,7 @@ func main() {
 			rl.DrawLineEx(
 				rl.NewVector2(float32(screenWidth/2), 0),
 				rl.NewVector2(float32(screenWidth/2), float32(screenHeight)),
-				10.0,
+				float32(screenWidth)/256,
 				dimWhite(125),
 			)
 
