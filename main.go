@@ -107,6 +107,7 @@ type score struct {
 type Game struct {
 	status                         gameStatus
 	lastTimeUpdated                float64
+	totalTimeRunning               float32
 	stones                         []stone
 	selectedStone                  *stone
 	selectedStoneRotAnimationAngle float32
@@ -117,6 +118,7 @@ type Game struct {
 	allShards                      []shard
 	score                          score
 	playerTurn                     player
+	stonesAreStill                 bool
 }
 
 // generates a random formation of 6 stones in a 3x4 matrix
@@ -169,6 +171,7 @@ func newGame() Game {
 	return Game{
 		status:                         Uninitialized,
 		lastTimeUpdated:                0.0,
+		totalTimeRunning:               0.0,
 		stones:                         []stone{},
 		selectedStone:                  nil,
 		selectedStoneRotAnimationAngle: 0.0,
@@ -180,7 +183,8 @@ func newGame() Game {
 			playerOne: 6,
 			playerTwo: 6,
 		},
-		playerTurn: PlayerOne,
+		playerTurn:     PlayerOne,
+		stonesAreStill: true,
 	}
 }
 
@@ -207,8 +211,6 @@ func main() {
 	}
 
 	rl.SetTargetFPS(60)
-
-	camera := rl.NewCamera2D(rl.NewVector2(0, 0), rl.NewVector2(0, 0), 0, 1)
 
 	defer rl.CloseWindow()
 
@@ -370,8 +372,8 @@ func main() {
 
 		if game.selectedStone != nil {
 			strength := rl.Vector2Distance(game.stoneHitPosition, game.selectedStone.pos)
-			strength = rl.Clamp(MaxPullLengthAllowed, 0, strength) * 3
-			game.selectedStoneRotAnimationAngle += rl.GetFrameTime() * strength
+			strength = rl.Clamp(MaxPullLengthAllowed, 0, strength)
+			game.selectedStoneRotAnimationAngle += rl.GetFrameTime() * 3 * strength
 		}
 
 		{ // creates the shards at the position of the dead stone
@@ -521,6 +523,7 @@ func main() {
 		}
 
 		game.lastTimeUpdated = rl.GetTime()
+		game.totalTimeRunning += rl.GetFrameTime()
 	}
 
 	areStonesStill := func() bool {
@@ -537,9 +540,9 @@ func main() {
 
 	handleMouseMove := func() {
 		game.stoneHitPosition = rl.GetMousePosition()
-		hasStopped := areStonesStill()
+		// hasStopped := areStonesStill()
 
-		if rl.IsMouseButtonDown(rl.MouseButtonRight) && hasStopped {
+		if rl.IsMouseButtonDown(rl.MouseButtonRight) && game.stonesAreStill {
 			for i, stone := range game.stones {
 				if stone.isDead {
 					continue
@@ -676,7 +679,7 @@ func main() {
 	}
 
 	handleCpuMove := func() {
-		if !areStonesStill() || game.status == GameOver {
+		if !game.stonesAreStill || game.status == GameOver {
 			return
 		}
 
@@ -708,17 +711,40 @@ func main() {
 			tealDarker,
 		)
 
-		if s.playerId == game.playerTurn {
+		if game.stonesAreStill && s.playerId == game.playerTurn && game.playerTurn == PlayerOne {
 			// the "active player" ring
 			rl.DrawRing(
 				s.pos,
-				s.radius*0.2,
-				s.radius*0.5,
+				s.radius*1.1,
+				s.radius*1.4,
 				0.0,
 				360.0,
 				0,
-				rl.Red,
+				dimWhite(50),
 			)
+
+			if game.selectedStone == s {
+				rl.DrawRing(
+					s.pos,
+					s.radius*1.1,
+					s.radius*1.4,
+					0.0+game.selectedStoneRotAnimationAngle,
+					40.0+game.selectedStoneRotAnimationAngle,
+					0,
+					dimWhite(100),
+				)
+			} else {
+				rl.DrawRing(
+					s.pos,
+					s.radius*1.1,
+					s.radius*1.4,
+					0.0+game.totalTimeRunning*10,
+					40.0+game.totalTimeRunning*10,
+					0,
+					dimWhite(100),
+				)
+			}
+
 		}
 
 		rl.DrawRing(
@@ -731,29 +757,20 @@ func main() {
 			rl.Green,
 		)
 
-		if game.selectedStone == s {
-			// this section draws the spinning wheel
-			// when the player is aiming
-			rl.DrawRing(
-				s.pos,
-				s.radius*1.1,
-				s.radius*1.5,
-				0.0,
-				360.0,
-				0,
-				dimWhite(50),
-			)
+		// if game.selectedStone == s {
+		// 	// this section draws the spinning wheel
+		// 	// when the player is aiming
+		// 	rl.DrawRing(
+		// 		s.pos,
+		// 		s.radius*1.1,
+		// 		s.radius*1.5,
+		// 		0.0,
+		// 		360.0,
+		// 		0,
+		// 		dimWhite(50),
+		// 	)
 
-			rl.DrawRing(
-				s.pos,
-				s.radius*1.1,
-				s.radius*1.5,
-				0.0+game.selectedStoneRotAnimationAngle,
-				40.0+game.selectedStoneRotAnimationAngle,
-				0,
-				dimWhite(100),
-			)
-		}
+		// }
 
 		// draw the ids
 		// rl.DrawText(fmt.Sprintf("%d", s.id), int32(s.pos.X), int32(s.pos.Y), 32, rl.Black)
@@ -890,6 +907,8 @@ func main() {
 			}
 		}
 
+		game.stonesAreStill = areStonesStill()
+
 		if game.status != Stopped {
 			if game.playerTurn == PlayerOne {
 				handleMouseMove()
@@ -904,11 +923,7 @@ func main() {
 		// draw background
 		rl.ClearBackground(bgColor)
 
-		rl.BeginMode2D(camera)
-
 		draw()
-
-		rl.EndMode2D()
 
 		rl.EndDrawing()
 	}
