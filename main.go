@@ -11,7 +11,6 @@ import (
 
 var BG_COLOR = rl.NewColor(139, 212, 195, 255)
 var STONE_COLLISION_SHARD_COLOR = rl.NewColor(255, 192, 113, 255)
-var AIM_VECTOR_COLOR = rl.Yellow
 
 type GameStatus = int8
 type ActionEnum = int8
@@ -115,7 +114,8 @@ type Game struct {
 	selectedStone                  *Stone
 	selectedStoneRotAnimationAngle float32
 	hitStoneMoving                 *Stone
-	stoneHitPosition               rl.Vector2
+	aimVectorStart                 rl.Vector2
+	aimVectorForwardExtensionEnd   rl.Vector2
 	action                         ActionEnum
 	allParticles                   []particle
 	allShards                      []shard
@@ -349,15 +349,19 @@ func main() {
 				p.b.life -= amount * 0.2
 			}
 
-			for i := 0.0; i < 100; i += 0.5 {
+			for i := float32(0.0); i < 100; i += 0.5 {
 				// TODO: shard size should depend on the screen size
+				shardColor := game.playerSettings[p.a.playerId].primaryColor
+				if rand.Float32() > 0.5 {
+					shardColor = game.playerSettings[p.b.playerId].primaryColor
+				}
 				part := NewShard(
 					p.collisionPoint,
-					float32(3.6*float32(i)),
+					3.6*i,
 					MaxParticleSpeed*rand.Float32(),
 					p.magnitude,
 					MaxShardRadius*(rand.Float32()+0.5),
-					STONE_COLLISION_SHARD_COLOR,
+					shardColor,
 					true,
 				)
 
@@ -387,7 +391,7 @@ func main() {
 		}
 
 		if game.selectedStone != nil {
-			strength := rl.Vector2Distance(game.stoneHitPosition, game.selectedStone.pos)
+			strength := rl.Vector2Distance(game.aimVectorStart, game.selectedStone.pos)
 			strength = rl.Clamp(MaxPullLengthAllowed, 0, strength)
 			game.selectedStoneRotAnimationAngle += rl.GetFrameTime() * 3 * strength
 		}
@@ -416,7 +420,7 @@ func main() {
 
 		if game.action == StoneHit {
 			// find the diff between the selected stone and where the mouse is
-			diff := rl.Vector2Subtract(game.selectedStone.pos, game.stoneHitPosition)
+			diff := rl.Vector2Subtract(game.selectedStone.pos, game.aimVectorStart)
 			// find the length of the diff vector
 			length := rl.Vector2Length(diff)
 			// make sure the length is bounded
@@ -552,15 +556,22 @@ func main() {
 		return true
 	}
 
+	setAimVectorStart := func(aimVectorStart rl.Vector2) {
+		game.aimVectorStart = aimVectorStart
+		if game.selectedStone != nil {
+			game.aimVectorForwardExtensionEnd = rl.Vector2Add(game.selectedStone.pos, rl.Vector2Negate(rl.Vector2Subtract(game.aimVectorStart, game.selectedStone.pos)))
+		}
+	}
+
 	handleMouseMove := func() {
-		game.stoneHitPosition = rl.GetMousePosition()
+		setAimVectorStart(rl.GetMousePosition())
 
 		if rl.IsMouseButtonDown(rl.MouseButtonRight) && game.stonesAreStill {
 			for i, stone := range game.stones {
 				if stone.isDead {
 					continue
 				}
-				if game.playerTurn == stone.playerId && rl.CheckCollisionPointCircle(game.stoneHitPosition, stone.pos, stone.radius) {
+				if game.playerTurn == stone.playerId && rl.CheckCollisionPointCircle(game.aimVectorStart, stone.pos, stone.radius) {
 					game.selectedStone = &game.stones[i]
 					game.action = StoneAimed
 					break
@@ -590,7 +601,7 @@ func main() {
 
 		game.selectedStone = actor
 		game.action = StoneHit
-		game.stoneHitPosition = rl.Vector2Add(actor.pos, rl.Vector2Negate(rl.Vector2Subtract(target.pos, actor.pos)))
+		setAimVectorStart(rl.Vector2Add(actor.pos, rl.Vector2Negate(rl.Vector2Subtract(target.pos, actor.pos))))
 	}
 
 	drawStone := func(s *Stone) {
@@ -723,6 +734,7 @@ func main() {
 		} else {
 			drawScore(screenWidth, screenHeight)
 
+			// draw the vertical centre line
 			rl.DrawLineEx(
 				rl.NewVector2(screenWidth/2, 0),
 				rl.NewVector2(screenWidth/2, screenHeight),
@@ -730,9 +742,31 @@ func main() {
 				dimWhite(125),
 			)
 
+			// draw the aim bubbles
+			if game.action == StoneAimed {
+				for i := float32(0.0); i <= 1.0; i += 0.1 {
+					amount := i + game.totalTimeRunning/10
+					amount = amount - float32(int(amount))
+					point := rl.Vector2Lerp(game.selectedStone.pos, game.aimVectorForwardExtensionEnd, amount)
+					rl.DrawCircleV(point, StoneRadius*0.4*(1-amount), dimWhite(50))
+				}
+			}
+
+			// draw the stones
 			for i := range game.stones {
 				stone := &(game.stones[i])
 				drawStone(stone)
+			}
+
+			// draw the aim line
+			if game.action == StoneAimed {
+				rl.DrawCircleV(game.selectedStone.pos, StoneRadius*0.1, dimWhite(60))
+				rl.DrawLineEx(
+					game.aimVectorStart,
+					game.selectedStone.pos,
+					3.0,
+					dimWhite(60),
+				)
 			}
 		}
 
@@ -748,23 +782,8 @@ func main() {
 		{
 			// draw shards
 			for _, p := range game.allShards {
-				mode := rl.BlendAlpha
-				if p.fade {
-					mode = rl.BlendAdditive
-				}
-				rl.BeginBlendMode(mode)
 				p.render()
-				rl.EndBlendMode()
 			}
-		}
-
-		if game.action == StoneAimed {
-			rl.DrawLineEx(
-				game.stoneHitPosition,
-				game.selectedStone.pos,
-				3.0,
-				AIM_VECTOR_COLOR,
-			)
 		}
 	}
 
