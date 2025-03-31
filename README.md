@@ -1,6 +1,8 @@
 # flik
 
-https://github.com/user-attachments/assets/ce13eaa1-e275-4290-af31-5df186c0a9ab
+Gameplay so far (_screen recording has some issues_)
+
+[https://github.com/user-attachments/assets/ce13eaa1-e275-4290-af31-5df186c0a9ab](https://github.com/user-attachments/assets/f9af3d36-0942-4fcc-a82e-504549b907ea)
 
 ### Idea
 
