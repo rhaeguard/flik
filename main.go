@@ -688,7 +688,7 @@ func main() {
 
 		game.selectedStone = actor
 		game.action = StoneHit
-		game.stoneHitPosition = rl.Vector2Add(actor.pos, rl.Vector2Scale(rl.Vector2Negate(rl.Vector2Subtract(target.pos, actor.pos)), 0.5))
+		game.stoneHitPosition = rl.Vector2Add(actor.pos, rl.Vector2Negate(rl.Vector2Subtract(target.pos, actor.pos)))
 	}
 
 	drawStone := func(s *stone) {
