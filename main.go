@@ -759,19 +759,29 @@ func main() {
 		// rl.DrawText(fmt.Sprintf("%d", s.id), int32(s.pos.X), int32(s.pos.Y), 32, rl.Black)
 	}
 
-	drawScore := func(screenWidth, screenHeight int32) {
-		dimmedWhiteColor := dimWhite(60)
+	drawScore := func(screenWidth, screenHeight float32) {
+		color := dimWhite(60)
+		labelP1, labelP2 := "you", "cpu"
+		defaultFont := rl.GetFontDefault()
+		p1Score := fmt.Sprintf("0%d", game.score.playerOne)
+		p2Score := fmt.Sprintf("0%d", game.score.playerTwo)
 
-		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), "00", FontSize, 0)
+		measuredSize := rl.MeasureTextEx(defaultFont, "00", FontSize, FontSize/10)
 
-		width := (screenWidth/2 - int32(measuredSize.X)) / 2
-		height := (screenHeight - int32(measuredSize.Y)) / 2
+		offsetX := (screenWidth/2 - measuredSize.X) / 2
+		offsetY := (screenHeight - measuredSize.Y) / 2
 
-		rl.DrawText(fmt.Sprintf("0%d", game.score.playerOne), width, height, int32(FontSize), dimmedWhiteColor)
-		rl.DrawText("you", width+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, int32(FontSize)/3, dimmedWhiteColor)
+		rl.DrawTextEx(defaultFont, p1Score, rl.NewVector2(offsetX, offsetY), FontSize, FontSize/10, color)
+		rl.DrawTextEx(defaultFont, p2Score, rl.NewVector2(screenWidth-offsetX-measuredSize.X, offsetY), FontSize, FontSize/10, color)
 
-		rl.DrawText(fmt.Sprintf("0%d", game.score.playerTwo), screenWidth-width-int32(measuredSize.X), height, int32(FontSize), dimmedWhiteColor)
-		rl.DrawText("cpu", screenWidth-width-int32(measuredSize.X)+int32(measuredSize.X)/4, height+4*int32(measuredSize.Y)/5, int32(FontSize)/3, dimmedWhiteColor)
+		labelP1Width := rl.MeasureTextEx(defaultFont, labelP1, FontSize/3, FontSize/30).X
+		labelP2Width := rl.MeasureTextEx(defaultFont, labelP2, FontSize/3, FontSize/30).X
+		p1OffsetX := (screenWidth/2 - labelP1Width) / 2
+		p2OffsetX := ((screenWidth/2 - labelP2Width) / 2) + screenWidth/2
+		labelsOffsetY := offsetY + measuredSize.Y*0.8
+
+		rl.DrawTextEx(defaultFont, labelP1, rl.NewVector2(p1OffsetX, labelsOffsetY), FontSize/3, FontSize/30, color)
+		rl.DrawTextEx(defaultFont, labelP2, rl.NewVector2(p2OffsetX, labelsOffsetY), FontSize/3, FontSize/30, color)
 	}
 
 	draw := func() {
@@ -807,7 +817,7 @@ func main() {
 				dimWhite(60),
 			)
 		} else {
-			drawScore(screenWidth, screenHeight)
+			drawScore(float32(screenWidth), float32(screenHeight))
 
 			rl.DrawLineEx(
 				rl.NewVector2(float32(screenWidth/2), 0),
