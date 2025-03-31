@@ -52,7 +52,3 @@ func (p *particle) render() {
 		rl.DrawCircleV(p.pos, p.radius, rl.NewColor(p.color.R, p.color.G, p.color.B, uint8(alpha)))
 	}
 }
-
-func circleIntersectionPoint(a, b *stone) rl.Vector2 {
-	return rl.Vector2Scale(rl.Vector2Add(a.pos, b.pos), 0.5)
-}

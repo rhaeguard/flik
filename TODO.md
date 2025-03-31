@@ -1,14 +1,14 @@
 - [x] Stones outside of the viewport do not participate in collisions nor stillness check
 - [x] If a stone is >50% outside of the viewport, it explodes. 
 - [x] Fix the entanglement issue
-- [ ] Use deltaTime in velocity calculations!
+- [x] Introduce a basic AI
+- [x] Screen size adjustments
+    - [x] Render text correctly according to the screen size
+    - [x] Render center line correctly (maybe just MacOS issue?)
+- [ ] Levels!
 - [ ] Add sound effects
 - [ ] Better stone visuals
 - [ ] Pick an artstyle for this game
-- [ ] Introduce a timer for a player to make a move
-- [ ] Introduce a basic AI
-- [ ] Screen size adjustments
-    - [ ] Render text correctly according to the screen size
-    - [ ] Render center line correctly
+- [ ] Introduce a timer for a player to make a move?
 - [ ] Music! Lofi or a bit more energetic?
 - [ ] Allow players to pick avatars and make these avatars say something when they make a good move. You can use the freely available visual novel assets on itch.io. This can also just be a character that represents the game owner or something...like Toasty! from Mortal Kombat.
