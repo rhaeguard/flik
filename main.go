@@ -402,10 +402,10 @@ func main() {
 
 				shardColor := game.playerSettings[stone.playerId].primaryColor
 
-				for i := 0.0; i < 300; i += 0.5 {
+				for i := float32(0.0); i < 300; i += 0.5 {
 					part := NewShard(
 						stone.pos,
-						float32(3.6*float32(i)),
+						3.6*i,
 						MaxParticleSpeed*rand.Float32(),
 						2,
 						MaxShardRadius*(rand.Float32()+0.5),
@@ -459,11 +459,11 @@ func main() {
 
 				life := 0.3 * (rl.Vector2Length(stone.velocity)) / 15
 
-				for i := 0; i < 25; i++ {
+				for range 25 {
 					angle := generalAngle + float32((rand.Intn(20) - 10))
 					part := NewParticle(
 						stone.pos,
-						float32(angle),
+						angle,
 						MaxParticleSpeed*rand.Float32(),
 						life,
 						stone.radius*1.02,
@@ -664,7 +664,7 @@ func main() {
 			s.radius*0.5,
 			s.radius*0.8,
 			0.0,
-			360.0*float32(s.life)/100,
+			360.0*s.life/100,
 			0,
 			playerSettings.lifeColor,
 		)
