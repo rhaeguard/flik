@@ -1,19 +1,16 @@
 package main
 
 import (
-	"cmp"
 	"fmt"
 	"image/color"
 	"math"
 	"math/rand"
-	"slices"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 var BG_COLOR = rl.NewColor(139, 212, 195, 255)
 var STONE_COLLISION_SHARD_COLOR = rl.NewColor(255, 192, 113, 255)
-var AIM_VECTOR_COLOR = rl.Yellow
 
 type GameStatus = int8
 type ActionEnum = int8
@@ -59,19 +56,25 @@ type Window struct {
 	height     int32
 }
 
-func (c *Window) GetScreenDimensions() (int32, int32) {
+func (c *Window) GetScreenDimensions() (float32, float32) {
 	if c.fullscreen {
-		w := int32(rl.GetScreenWidth())
-		h := int32(rl.GetScreenHeight())
+		w := float32(rl.GetScreenWidth())
+		h := float32(rl.GetScreenHeight())
 		return w, h
 	} else {
-		return c.width, c.height
+		return float32(c.width), float32(c.height)
 	}
+}
+
+func (c *Window) GetScreenBoundary() rl.Rectangle {
+	screenWidth, screenHeight := c.GetScreenDimensions()
+	screenRect := rl.NewRectangle(0, 0, screenWidth, screenHeight)
+	return screenRect
 }
 
 func (c *Window) GetScreenDiagonal() float32 {
 	w, h := c.GetScreenDimensions()
-	res := math.Sqrt(float64(w*w) + float64(h*h))
+	res := math.Sqrt(float64(w*w + h*h))
 	return float32(res)
 }
 
@@ -86,10 +89,10 @@ type Stone struct {
 	playerId Player
 }
 
-func newStone(stoneId int, x, y float64, radius, mass float32, playerId Player) Stone {
+func newStone(stoneId int, x, y float32, radius, mass float32, playerId Player) Stone {
 	return Stone{
 		id:       stoneId,
-		pos:      rl.NewVector2(float32(x), float32(y)),
+		pos:      rl.NewVector2(x, y),
 		velocity: rl.NewVector2(0, 0),
 		mass:     mass,
 		radius:   radius,
@@ -111,10 +114,11 @@ type Game struct {
 	selectedStone                  *Stone
 	selectedStoneRotAnimationAngle float32
 	hitStoneMoving                 *Stone
-	stoneHitPosition               rl.Vector2
+	aimVectorStart                 rl.Vector2
+	aimVectorForwardExtensionEnd   rl.Vector2
 	action                         ActionEnum
-	allParticles                   []particle
-	allShards                      []shard
+	allParticles                   []Particle
+	allShards                      []Shard
 	score                          map[Player]uint8
 	playerTurn                     Player
 	stonesAreStill                 bool
@@ -136,9 +140,6 @@ func generateStones(window *Window) []Stone {
 
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
-	width := float64(screenWidth)
-	height := float64(screenHeight)
-
 	f1 := generateFormation()
 	f2 := generateFormation()
 
@@ -146,18 +147,18 @@ func generateStones(window *Window) []Stone {
 
 	for x := 1; x <= 3; x += 1 {
 		for y := 1; y <= 4; y += 1 {
-			h := height * float64(y) * 0.2
+			h := screenHeight * float32(y) * 0.2
 
 			pos := 3*(y-1) + (x - 1)
 
 			if f1[pos] {
-				w1 := width * float64(x) * 0.125
+				w1 := screenWidth * float32(x) * 0.125
 				stones = append(stones, newStone(ids, w1, h, StoneRadius, 1, PlayerOne))
 				ids++
 			}
 
 			if f2[pos] {
-				w2 := width*float64(x)*0.125 + width*0.5
+				w2 := screenWidth*float32(x)*0.125 + screenWidth*0.5
 				stones = append(stones, newStone(ids, w2, h, StoneRadius, 1, PlayerTwo))
 				ids++
 			}
@@ -177,8 +178,8 @@ func newGame() Game {
 		selectedStoneRotAnimationAngle: 0.0,
 		hitStoneMoving:                 nil,
 		action:                         NoAction,
-		allParticles:                   []particle{},
-		allShards:                      []shard{},
+		allParticles:                   []Particle{},
+		allShards:                      []Shard{},
 		score: map[Player]uint8{
 			PlayerOne: 6,
 			PlayerTwo: 6,
@@ -348,15 +349,19 @@ func main() {
 				p.b.life -= amount * 0.2
 			}
 
-			for i := 0.0; i < 100; i += 0.5 {
+			for i := float32(0.0); i < 100; i += 0.5 {
 				// TODO: shard size should depend on the screen size
+				shardColor := game.playerSettings[p.a.playerId].primaryColor
+				if rand.Float32() > 0.5 {
+					shardColor = game.playerSettings[p.b.playerId].primaryColor
+				}
 				part := NewShard(
 					p.collisionPoint,
-					float32(3.6*float32(i)),
+					3.6*i,
 					MaxParticleSpeed*rand.Float32(),
 					p.magnitude,
 					MaxShardRadius*(rand.Float32()+0.5),
-					STONE_COLLISION_SHARD_COLOR,
+					shardColor,
 					true,
 				)
 
@@ -364,8 +369,7 @@ func main() {
 			}
 		}
 
-		screenWidth, screenHeight := window.GetScreenDimensions()
-		screenRect := rl.NewRectangle(0, 0, float32(screenWidth), float32(screenHeight))
+		screenRect := window.GetScreenBoundary()
 
 		newlyDeadStonesIx := []int{}
 
@@ -387,7 +391,7 @@ func main() {
 		}
 
 		if game.selectedStone != nil {
-			strength := rl.Vector2Distance(game.stoneHitPosition, game.selectedStone.pos)
+			strength := rl.Vector2Distance(game.aimVectorStart, game.selectedStone.pos)
 			strength = rl.Clamp(MaxPullLengthAllowed, 0, strength)
 			game.selectedStoneRotAnimationAngle += rl.GetFrameTime() * 3 * strength
 		}
@@ -398,10 +402,10 @@ func main() {
 
 				shardColor := game.playerSettings[stone.playerId].primaryColor
 
-				for i := 0.0; i < 300; i += 0.5 {
+				for i := float32(0.0); i < 300; i += 0.5 {
 					part := NewShard(
 						stone.pos,
-						float32(3.6*float32(i)),
+						3.6*i,
 						MaxParticleSpeed*rand.Float32(),
 						2,
 						MaxShardRadius*(rand.Float32()+0.5),
@@ -416,7 +420,7 @@ func main() {
 
 		if game.action == StoneHit {
 			// find the diff between the selected stone and where the mouse is
-			diff := rl.Vector2Subtract(game.selectedStone.pos, game.stoneHitPosition)
+			diff := rl.Vector2Subtract(game.selectedStone.pos, game.aimVectorStart)
 			// find the length of the diff vector
 			length := rl.Vector2Length(diff)
 			// make sure the length is bounded
@@ -455,11 +459,11 @@ func main() {
 
 				life := 0.3 * (rl.Vector2Length(stone.velocity)) / 15
 
-				for i := 0; i < 25; i++ {
+				for range 25 {
 					angle := generalAngle + float32((rand.Intn(20) - 10))
 					part := NewParticle(
 						stone.pos,
-						float32(angle),
+						angle,
 						MaxParticleSpeed*rand.Float32(),
 						life,
 						stone.radius*1.02,
@@ -486,7 +490,7 @@ func main() {
 
 		{
 			// filter out the dead particles
-			newAllParticles := []particle{}
+			newAllParticles := []Particle{}
 			for _, p := range game.allParticles {
 				if p.life > 0 {
 					newAllParticles = append(newAllParticles, p)
@@ -498,7 +502,7 @@ func main() {
 
 		{
 			// filter out the dead shards
-			newShards := []shard{}
+			newShards := []Shard{}
 			for _, p := range game.allShards {
 				if p.life > 0 {
 					newShards = append(newShards, p)
@@ -552,15 +556,22 @@ func main() {
 		return true
 	}
 
+	setAimVectorStart := func(aimVectorStart rl.Vector2) {
+		game.aimVectorStart = aimVectorStart
+		if game.selectedStone != nil {
+			game.aimVectorForwardExtensionEnd = rl.Vector2Add(game.selectedStone.pos, rl.Vector2Negate(rl.Vector2Subtract(game.aimVectorStart, game.selectedStone.pos)))
+		}
+	}
+
 	handleMouseMove := func() {
-		game.stoneHitPosition = rl.GetMousePosition()
+		setAimVectorStart(rl.GetMousePosition())
 
 		if rl.IsMouseButtonDown(rl.MouseButtonRight) && game.stonesAreStill {
 			for i, stone := range game.stones {
 				if stone.isDead {
 					continue
 				}
-				if game.playerTurn == stone.playerId && rl.CheckCollisionPointCircle(game.stoneHitPosition, stone.pos, stone.radius) {
+				if game.playerTurn == stone.playerId && rl.CheckCollisionPointCircle(game.aimVectorStart, stone.pos, stone.radius) {
 					game.selectedStone = &game.stones[i]
 					game.action = StoneAimed
 					break
@@ -577,126 +588,12 @@ func main() {
 		}
 	}
 
-	type searchPair struct {
-		actor, target *Stone
-		score         float32
-	}
-
-	compareSearchPairs := func(p1, p2 searchPair) int {
-		return cmp.Compare(p2.score, p1.score)
-	}
-
-	/// sufficiently "smart" AI
-	/// searches the options based on:
-	/// - proximity
-	/// - life state of the target stone
-	/// - life state of the hitting stone
-	/// - whether own stone will be hit in the process
-	/// - whether stone will richochet
-	cpuSearchBestOption := func() (*Stone, *Stone) {
-		searchPairs := []searchPair{}
-		for i := range game.stones {
-			actor := &game.stones[i]
-			if actor.isDead || actor.playerId == PlayerOne { // TODO: we should have better ways to indicate the opponent
-				continue
-			}
-			for j := range game.stones {
-				if i == j {
-					continue
-				}
-
-				target := &game.stones[j]
-				if target.isDead || target.playerId == PlayerTwo { // TODO: better way to indicate the attacking player
-					continue
-				}
-
-				searchPairs = append(searchPairs, searchPair{
-					actor:  actor,
-					target: target,
-				})
-			}
-		}
-
-		screenDiagonalSize := window.GetScreenDiagonal()
-
-		for pi := range searchPairs {
-			pair := &(searchPairs[pi])
-			actor, target := pair.actor, pair.target
-
-			ssOrigin := rl.Vector2Subtract(actor.pos, target.pos)
-			angle := 2 * rl.Vector2LineAngle(rl.Vector2Normalize(ssOrigin), rl.NewVector2(1, 0))
-
-			aTop := rl.Vector2Add(rl.Vector2Rotate(rl.NewVector2(0, -actor.radius), -angle), actor.pos)
-			aBottom := rl.Vector2Add(rl.Vector2Rotate(rl.NewVector2(0, actor.radius), -angle), actor.pos)
-
-			tTop := rl.Vector2Add(rl.Vector2Rotate(rl.NewVector2(0, -target.radius), -angle), target.pos)
-			tBottom := rl.Vector2Add(rl.Vector2Rotate(rl.NewVector2(0, target.radius), -angle), target.pos)
-
-			hitsOwn := false
-			richochets := false
-
-			for i := range game.stones {
-				stone := &game.stones[i]
-				if stone.isDead || (stone == actor || stone == target) {
-					continue
-				}
-				// line 1 check aTop - tTop
-				if rl.CheckCollisionCircleLine(stone.pos, stone.radius, aTop, tTop) {
-					hitsOwn = stone.playerId == PlayerTwo // better way needed?
-					richochets = true
-				}
-				// line 2 check aBottom - tBottom
-				if rl.CheckCollisionCircleLine(stone.pos, stone.radius, aBottom, tBottom) {
-					hitsOwn = stone.playerId == PlayerTwo
-					richochets = true
-				}
-
-				// line 3 check center to center
-				if rl.CheckCollisionCircleLine(stone.pos, stone.radius, actor.pos, target.pos) {
-					hitsOwn = stone.playerId == PlayerTwo
-					richochets = true
-				}
-
-				if hitsOwn && richochets {
-					break
-				}
-			}
-
-			distance := rl.Vector2Distance(actor.pos, target.pos) / screenDiagonalSize
-
-			pair.score -= distance
-			if hitsOwn {
-				pair.score += -1
-			}
-
-			if richochets {
-				pair.score += -0.5
-			}
-
-			if actor.life <= 5 {
-				pair.score += -0.5
-			}
-
-			if target.life <= 10 {
-				pair.score += 1
-			}
-		}
-
-		slices.SortFunc(searchPairs, compareSearchPairs)
-
-		if len(searchPairs) > 0 {
-			pair := searchPairs[0]
-			return pair.actor, pair.target
-		}
-		return nil, nil
-	}
-
 	handleCpuMove := func() {
 		if !game.stonesAreStill || game.status == GameOver {
 			return
 		}
 
-		actor, target := cpuSearchBestOption()
+		actor, target := cpuSearchBestOption(&game, &window)
 
 		if actor == nil || target == nil {
 			return
@@ -704,7 +601,7 @@ func main() {
 
 		game.selectedStone = actor
 		game.action = StoneHit
-		game.stoneHitPosition = rl.Vector2Add(actor.pos, rl.Vector2Negate(rl.Vector2Subtract(target.pos, actor.pos)))
+		setAimVectorStart(rl.Vector2Add(actor.pos, rl.Vector2Negate(rl.Vector2Subtract(target.pos, actor.pos))))
 	}
 
 	drawStone := func(s *Stone) {
@@ -767,7 +664,7 @@ func main() {
 			s.radius*0.5,
 			s.radius*0.8,
 			0.0,
-			360.0*float32(s.life)/100,
+			360.0*s.life/100,
 			0,
 			playerSettings.lifeColor,
 		)
@@ -811,8 +708,8 @@ func main() {
 			}
 			whoWon = fmt.Sprintf("%s won!", whoWon)
 			measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), whoWon, 200, 10)
-			w := (float32(screenWidth) - measuredSize.X) / 2
-			h := (float32(screenHeight) - measuredSize.Y) / 2
+			w := (screenWidth - measuredSize.X) / 2
+			h := (screenHeight - measuredSize.Y) / 2
 
 			rl.DrawTextEx(
 				rl.GetFontDefault(),
@@ -824,7 +721,7 @@ func main() {
 			)
 
 			message2 := rl.MeasureTextEx(rl.GetFontDefault(), "press space to restart", 50, 10)
-			w = (float32(screenWidth) - message2.X) / 2
+			w = (screenWidth - message2.X) / 2
 			h = h + measuredSize.Y*1.5
 			rl.DrawTextEx(
 				rl.GetFontDefault(),
@@ -835,18 +732,41 @@ func main() {
 				dimWhite(60),
 			)
 		} else {
-			drawScore(float32(screenWidth), float32(screenHeight))
+			drawScore(screenWidth, screenHeight)
 
+			// draw the vertical centre line
 			rl.DrawLineEx(
-				rl.NewVector2(float32(screenWidth/2), 0),
-				rl.NewVector2(float32(screenWidth/2), float32(screenHeight)),
-				10.0,
+				rl.NewVector2(screenWidth/2, 0),
+				rl.NewVector2(screenWidth/2, screenHeight),
+				screenWidth/256,
 				dimWhite(125),
 			)
 
+			// draw the aim bubbles
+			if game.action == StoneAimed {
+				for i := float32(0.0); i <= 1.0; i += 0.1 {
+					amount := i + game.totalTimeRunning/10
+					amount = amount - float32(int(amount))
+					point := rl.Vector2Lerp(game.selectedStone.pos, game.aimVectorForwardExtensionEnd, amount)
+					rl.DrawCircleV(point, StoneRadius*0.4*(1-amount), dimWhite(50))
+				}
+			}
+
+			// draw the stones
 			for i := range game.stones {
 				stone := &(game.stones[i])
 				drawStone(stone)
+			}
+
+			// draw the aim line
+			if game.action == StoneAimed {
+				rl.DrawCircleV(game.selectedStone.pos, StoneRadius*0.1, dimWhite(60))
+				rl.DrawLineEx(
+					game.aimVectorStart,
+					game.selectedStone.pos,
+					3.0,
+					dimWhite(60),
+				)
 			}
 		}
 
@@ -862,23 +782,8 @@ func main() {
 		{
 			// draw shards
 			for _, p := range game.allShards {
-				mode := rl.BlendAlpha
-				if p.fade {
-					mode = rl.BlendAdditive
-				}
-				rl.BeginBlendMode(mode)
 				p.render()
-				rl.EndBlendMode()
 			}
-		}
-
-		if game.action == StoneAimed {
-			rl.DrawLineEx(
-				game.stoneHitPosition,
-				game.selectedStone.pos,
-				3.0,
-				AIM_VECTOR_COLOR,
-			)
 		}
 	}
 
@@ -888,13 +793,13 @@ func main() {
 			// magic numbers
 			// ratio is computed based on 2560 x 1440
 			VelocityDampingFactor = 0.987
-			VelocityThresholdToStop = float32(screenWidth) / 6_000
-			MaxPullLengthAllowed = 0.1 * float32(screenWidth)
-			MaxPushVelocityAllowed = 0.008 * float32(screenWidth)
-			MaxParticleSpeed = 0.008 * float32(screenWidth)
-			MaxShardRadius = float32(screenWidth) / 256
-			StoneRadius = float32(screenHeight) * 0.06
-			FontSize = float32(screenWidth) * 0.25
+			VelocityThresholdToStop = screenWidth / 6_000
+			MaxPullLengthAllowed = 0.1 * screenWidth
+			MaxPushVelocityAllowed = 0.008 * screenWidth
+			MaxParticleSpeed = 0.008 * screenWidth
+			MaxShardRadius = screenWidth / 256
+			StoneRadius = screenHeight * 0.06
+			FontSize = screenWidth * 0.25
 			// init
 			game = newGame()
 			game.init(&window)
