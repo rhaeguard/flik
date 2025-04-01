@@ -23,19 +23,19 @@ func compareSearchPairs(p1, p2 searchPair) int {
 // / - life state of the hitting stone
 // / - whether own stone will be hit in the process
 // / - whether stone will richochet
-func cpuSearchBestOption(game *Game, window *Window) (*Stone, *Stone) {
+func cpuSearchBestOption(level *Level, window *Window) (*Stone, *Stone) {
 	searchPairs := []searchPair{}
-	for i := range game.stones {
-		actor := &game.stones[i]
+	for i := range level.stones {
+		actor := &level.stones[i]
 		if actor.isDead || actor.playerId == PlayerOne { // TODO: we should have better ways to indicate the opponent
 			continue
 		}
-		for j := range game.stones {
+		for j := range level.stones {
 			if i == j {
 				continue
 			}
 
-			target := &game.stones[j]
+			target := &level.stones[j]
 			if target.isDead || target.playerId == PlayerTwo { // TODO: better way to indicate the attacking player
 				continue
 			}
@@ -65,8 +65,8 @@ func cpuSearchBestOption(game *Game, window *Window) (*Stone, *Stone) {
 		hitsOwn := false
 		richochets := false
 
-		for i := range game.stones {
-			stone := &game.stones[i]
+		for i := range level.stones {
+			stone := &level.stones[i]
 			if stone.isDead || (stone == actor || stone == target) {
 				continue
 			}
