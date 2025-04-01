@@ -31,6 +31,10 @@ func (scene *SceneGameOver) HandleUserInput(window *Window) {
 }
 
 func (scene *SceneGameOver) Update(window *Window) (SceneId, any) {
+	for i := range scene.data.allShards {
+		scene.data.allShards[i].update()
+	}
+
 	return scene.nextSceneId, nil
 }
 
@@ -66,4 +70,11 @@ func (scene *SceneGameOver) Draw(window *Window) {
 		10,
 		dimWhite(60),
 	)
+
+	{
+		// draw shards
+		for _, p := range scene.data.allShards {
+			p.render()
+		}
+	}
 }

@@ -80,15 +80,17 @@ func (g *Game) Init(window *Window) {
 	FontSize = screenWidth * 0.25
 
 	// initialize the gameLevelScene
+	mainScene := NewSceneMain()
+	g.scenes[Main] = &mainScene
+
 	gameLevelScene := NewSceneLevelsBasic()
-	// gameLevelScene.Init(nil, window)
 	g.scenes[Levels] = &gameLevelScene
 
 	gameOverScene := NewSceneGameOver()
 	g.scenes[GameOver] = &gameOverScene
 
 	// set the init status
-	g.currentScene = Levels
+	g.currentScene = Main
 	g.scenes[g.currentScene].Init(nil, window)
 	g.status = GameInitialized
 }
