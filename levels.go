@@ -51,3 +51,6 @@ func (scene *SceneLevelsBasic) Draw(window *Window) {
 	draw(&scene.level, window)
 
 }
+func (scene *SceneLevelsBasic) Teardown(window *Window) {
+
+}

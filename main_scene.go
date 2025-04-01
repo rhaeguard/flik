@@ -62,7 +62,7 @@ func (scene *SceneMain) Init(data any, window *Window) {
 		text:        "controls",
 		rectangle:   rl.NewRectangle(w, h, controls.X, controls.Y),
 		fontSize:    FontSize / 5,
-		targetScene: Main,
+		targetScene: Controls,
 	})
 
 	quitText := rl.MeasureTextEx(defaultFont, "quit", FontSize/5, 10)
@@ -73,7 +73,7 @@ func (scene *SceneMain) Init(data any, window *Window) {
 		text:        "quit",
 		rectangle:   rl.NewRectangle(w, h, quitText.X, quitText.Y),
 		fontSize:    FontSize / 5,
-		targetScene: Main,
+		targetScene: Quit,
 	})
 }
 
@@ -123,5 +123,9 @@ func (scene *SceneMain) Draw(window *Window) {
 			dimWhite(uint8(dimLevel)),
 		)
 	}
+
+}
+
+func (scene *SceneMain) Teardown(window *Window) {
 
 }

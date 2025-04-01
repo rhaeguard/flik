@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -34,7 +33,9 @@ const (
 	Main     SceneId = iota
 	Settings SceneId = iota
 	Levels   SceneId = iota
+	Controls SceneId = iota
 	GameOver SceneId = iota
+	Quit     SceneId = iota
 	// game status
 	GameUninitialized GameStatus = iota
 	GameInitialized   GameStatus = iota
@@ -46,6 +47,7 @@ type Scene interface {
 	HandleUserInput(window *Window)
 	Update(window *Window) (SceneId, any)
 	Draw(window *Window)
+	Teardown(window *Window)
 }
 
 type GameSettings struct{}
@@ -89,23 +91,32 @@ func (g *Game) Init(window *Window) {
 	gameOverScene := NewSceneGameOver()
 	g.scenes[GameOver] = &gameOverScene
 
+	controlsScene := NewSceneControls()
+	g.scenes[Controls] = &controlsScene
+
 	// set the init status
 	g.currentScene = Main
 	g.scenes[g.currentScene].Init(nil, window)
 	g.status = GameInitialized
 }
 
-func (g *Game) Update(window *Window) {
+func (g *Game) Update(window *Window) uint8 {
 	scene := g.scenes[g.currentScene]
 
 	scene.HandleUserInput(window)
 
 	nextSceneId, data := scene.Update(window)
-	fmt.Printf("%d -> %d : %t\n", g.currentScene, nextSceneId, data == nil)
+
+	if nextSceneId == Quit {
+		return 1
+	}
+
 	if g.currentScene != nextSceneId {
 		g.scenes[nextSceneId].Init(data, window)
 		g.currentScene = nextSceneId
 	}
+
+	return 0
 }
 
 func (g *Game) Draw(window *Window) {
@@ -142,7 +153,9 @@ func main() {
 			(&game).Init(&window)
 		}
 
-		game.Update(&window)
+		if game.Update(&window) != 0 {
+			break
+		}
 
 		rl.BeginDrawing()
 
@@ -150,4 +163,11 @@ func main() {
 
 		rl.EndDrawing()
 	}
+
+	game.scenes[Main].Teardown(&window)
+	// game.scenes[Settings].Teardown(&window)
+	game.scenes[Levels].Teardown(&window)
+	game.scenes[Controls].Teardown(&window)
+	game.scenes[GameOver].Teardown(&window)
+	// game.scenes[Quit].Teardown(&window)
 }

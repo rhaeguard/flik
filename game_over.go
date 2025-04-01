@@ -46,27 +46,27 @@ func (scene *SceneGameOver) Draw(window *Window) {
 		whoWon = scene.data.playerSettings[PlayerTwo].label
 	}
 	whoWon = fmt.Sprintf("%s won!", whoWon)
-	measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), whoWon, 200, 10)
+	measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), whoWon, FontSize/3, 10)
 	w := (screenWidth - measuredSize.X) / 2
-	h := (screenHeight - measuredSize.Y) / 2
+	h := (screenHeight - measuredSize.Y) / 3
 
 	rl.DrawTextEx(
 		rl.GetFontDefault(),
 		whoWon,
 		rl.NewVector2(w, h),
-		200,
+		FontSize/3,
 		10,
 		dimWhite(60),
 	)
 
-	message2 := rl.MeasureTextEx(rl.GetFontDefault(), "press space to restart", 50, 10)
+	message2 := rl.MeasureTextEx(rl.GetFontDefault(), "press space to restart", FontSize/5, 10)
 	w = (screenWidth - message2.X) / 2
 	h = h + measuredSize.Y*1.5
 	rl.DrawTextEx(
 		rl.GetFontDefault(),
 		"press space to restart",
 		rl.NewVector2(w, h),
-		50,
+		FontSize/5,
 		10,
 		dimWhite(60),
 	)
@@ -77,4 +77,8 @@ func (scene *SceneGameOver) Draw(window *Window) {
 			p.render()
 		}
 	}
+}
+
+func (scene *SceneGameOver) Teardown(window *Window) {
+
 }
