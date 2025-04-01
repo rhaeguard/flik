@@ -6,19 +6,21 @@ https://github.com/user-attachments/assets/62f37ef5-ee2e-40e0-b870-7527229fe023
 
 ### Idea
 
-When me and my brother were little, we used to come up with ideas for different games with what we had available to us. One of those was a game where the goal was to hit and knock off all caps of the opponent. Those caps were all Coca-Cola, Fanta, Sprite caps which all had their own colors. This game was played on a chessboard.
+When me and my brother were little, we used to come up with ideas for different games with what we had available to us. One of those was a game where the goal was to hit and knock off all bottle caps of the opponent from the board. Those bottle caps were all Coca-Cola, Fanta, Sprite caps which all had their own colors. We used to play it on a chessboard.
 
 #### Rules
 
-- The playing field is the same as the chessboard (for now) and split into two sections, one for each player
-- Each side gets 6 pieces and they can spread them as they want on their side
-- A player tries to hit the opponent's cap by flicking their own cap, and the goal is to knock it off the playing field.
-- You can only hit your own cap
+- Each side gets 6 pieces that are spread randomly into 6 of possible 12 positions
+- A player tries to hit the opponent's cap by launching their own cap towards the opponent, and the goal is to knock caps off the playing field.
+- You can only launch your own cap
 - Game ends when only one player's caps remain on the board
+- Caps have life points and both hitting and getting hit takes life points
 
 ### Running and Building
 
 On Windows:
+
+There's already a Windows executable provided in the [bin](./bin) folder. Alternatively you can build and run from the source.
 
 ```sh
 # from the root of the project
