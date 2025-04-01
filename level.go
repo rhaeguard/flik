@@ -15,7 +15,7 @@ const (
 	Uninitialized LevelStatus = iota
 	Initialized   LevelStatus = iota
 	Stopped       LevelStatus = iota
-	GameOver      LevelStatus = iota
+	Finished      LevelStatus = iota
 	// action enums
 	NoAction   ActionEnum = iota
 	StoneAimed ActionEnum = iota
@@ -227,20 +227,20 @@ type collisionPair struct {
 	magnitude      float32
 }
 
-func update(game *Level, window *Window) {
+func update(level *Level, window *Window) {
 	seen := map[string]bool{}
 	collidingPairs := []collisionPair{}
-	for i := range game.stones {
-		a := &game.stones[i]
+	for i := range level.stones {
+		a := &level.stones[i]
 		if a.isDead {
 			continue
 		}
-		for j := range game.stones {
+		for j := range level.stones {
 			if i == j {
 				continue
 			}
 
-			b := &game.stones[j]
+			b := &level.stones[j]
 
 			if b.isDead {
 				continue
@@ -272,7 +272,7 @@ func update(game *Level, window *Window) {
 
 		resolvePenetrationDepth(p.a, p.b)
 		resolveCollision(p.a, p.b)
-		game.hitStoneMoving = nil
+		level.hitStoneMoving = nil
 
 		if aIsFaster {
 			p.b.life -= amount
@@ -284,9 +284,9 @@ func update(game *Level, window *Window) {
 
 		for i := float32(0.0); i < 100; i += 0.5 {
 			// TODO: shard size should depend on the screen size
-			shardColor := game.playerSettings[p.a.playerId].primaryColor
+			shardColor := level.playerSettings[p.a.playerId].primaryColor
 			if rand.Float32() > 0.5 {
-				shardColor = game.playerSettings[p.b.playerId].primaryColor
+				shardColor = level.playerSettings[p.b.playerId].primaryColor
 			}
 			part := NewShard(
 				p.collisionPoint,
@@ -298,7 +298,7 @@ func update(game *Level, window *Window) {
 				true,
 			)
 
-			game.allShards = append(game.allShards, part)
+			level.allShards = append(level.allShards, part)
 		}
 	}
 
@@ -306,8 +306,8 @@ func update(game *Level, window *Window) {
 
 	newlyDeadStonesIx := []int{}
 
-	for i := range game.stones {
-		stone := &game.stones[i]
+	for i := range level.stones {
+		stone := &level.stones[i]
 		if stone.isDead {
 			continue
 		}
@@ -317,23 +317,23 @@ func update(game *Level, window *Window) {
 		if !rl.CheckCollisionPointRec(stone.pos, screenRect) || stone.life <= 0 {
 			stone.isDead = true
 			newlyDeadStonesIx = append(newlyDeadStonesIx, i)
-			if game.hitStoneMoving == stone {
-				game.hitStoneMoving = nil
+			if level.hitStoneMoving == stone {
+				level.hitStoneMoving = nil
 			}
 		}
 	}
 
-	if game.selectedStone != nil {
-		strength := rl.Vector2Distance(game.aimVectorStart, game.selectedStone.pos)
+	if level.selectedStone != nil {
+		strength := rl.Vector2Distance(level.aimVectorStart, level.selectedStone.pos)
 		strength = rl.Clamp(MaxPullLengthAllowed, 0, strength)
-		game.selectedStoneRotAnimationAngle += rl.GetFrameTime() * 3 * strength
+		level.selectedStoneRotAnimationAngle += rl.GetFrameTime() * 3 * strength
 	}
 
 	{ // creates the shards at the position of the dead stone
 		for _, ix := range newlyDeadStonesIx {
-			stone := &game.stones[ix]
+			stone := &level.stones[ix]
 
-			shardColor := game.playerSettings[stone.playerId].primaryColor
+			shardColor := level.playerSettings[stone.playerId].primaryColor
 
 			for i := float32(0.0); i < 300; i += 0.5 {
 				part := NewShard(
@@ -346,14 +346,14 @@ func update(game *Level, window *Window) {
 					false,
 				)
 
-				game.allShards = append(game.allShards, part)
+				level.allShards = append(level.allShards, part)
 			}
 		}
 	}
 
-	if game.action == StoneHit {
+	if level.action == StoneHit {
 		// find the diff between the selected stone and where the mouse is
-		diff := rl.Vector2Subtract(game.selectedStone.pos, game.aimVectorStart)
+		diff := rl.Vector2Subtract(level.selectedStone.pos, level.aimVectorStart)
 		// find the length of the diff vector
 		length := rl.Vector2Length(diff)
 		// make sure the length is bounded
@@ -365,25 +365,25 @@ func update(game *Level, window *Window) {
 		// scale it up based on the speed
 		v := rl.Vector2Scale(rl.Vector2Normalize(diff), speed)
 
-		game.selectedStone.velocity = v
+		level.selectedStone.velocity = v
 
-		game.action = NoAction
-		game.hitStoneMoving = game.selectedStone
-		game.selectedStone = nil
-		game.selectedStoneRotAnimationAngle = 0
-		if game.playerTurn == PlayerOne {
-			game.playerTurn = PlayerTwo
+		level.action = NoAction
+		level.hitStoneMoving = level.selectedStone
+		level.selectedStone = nil
+		level.selectedStoneRotAnimationAngle = 0
+		if level.playerTurn == PlayerOne {
+			level.playerTurn = PlayerTwo
 		} else {
-			game.playerTurn = PlayerOne
+			level.playerTurn = PlayerOne
 		}
 	}
 
 	{
 		// rocket exhaust
-		stone := game.hitStoneMoving
+		stone := level.hitStoneMoving
 
 		if stone != nil {
-			rocketColor := game.playerSettings[stone.playerId].rocketColor
+			rocketColor := level.playerSettings[stone.playerId].rocketColor
 
 			generalAngle := (rl.Vector2Angle(
 				rl.Vector2Normalize(stone.velocity),
@@ -403,54 +403,54 @@ func update(game *Level, window *Window) {
 					rocketColor,
 				)
 
-				game.allParticles = append(game.allParticles, part)
+				level.allParticles = append(level.allParticles, part)
 			}
 
 			if rl.Vector2Length(stone.velocity) == 0 {
-				game.hitStoneMoving = nil
+				level.hitStoneMoving = nil
 			}
 
 		}
 	}
 
-	for i := range game.allParticles {
-		game.allParticles[i].update()
+	for i := range level.allParticles {
+		level.allParticles[i].update()
 	}
 
-	for i := range game.allShards {
-		game.allShards[i].update()
+	for i := range level.allShards {
+		level.allShards[i].update()
 	}
 
 	{
 		// filter out the dead particles
 		newAllParticles := []Particle{}
-		for _, p := range game.allParticles {
+		for _, p := range level.allParticles {
 			if p.life > 0 {
 				newAllParticles = append(newAllParticles, p)
 			}
 		}
 
-		game.allParticles = newAllParticles
+		level.allParticles = newAllParticles
 	}
 
 	{
 		// filter out the dead shards
 		newShards := []Shard{}
-		for _, p := range game.allShards {
+		for _, p := range level.allShards {
 			if p.life > 0 {
 				newShards = append(newShards, p)
 			}
 		}
 
-		game.allShards = newShards
+		level.allShards = newShards
 	}
 
-	if game.status == Initialized {
+	if level.status == Initialized {
 		// scoring calculation
 		scorePlayerOne := 0
 		scorePlayerTwo := 0
 
-		for _, stone := range game.stones {
+		for _, stone := range level.stones {
 			if stone.isDead {
 				continue
 			}
@@ -464,17 +464,17 @@ func update(game *Level, window *Window) {
 			}
 		}
 
-		game.score[PlayerOne] = uint8(scorePlayerOne)
-		game.score[PlayerTwo] = uint8(scorePlayerTwo)
+		level.score[PlayerOne] = uint8(scorePlayerOne)
+		level.score[PlayerTwo] = uint8(scorePlayerTwo)
 
 		if scorePlayerOne*scorePlayerTwo == 0 {
-			game.status = GameOver
-			game.playerTurn = PlayerOne
+			level.status = Finished
+			level.playerTurn = PlayerOne
 		}
 	}
 
-	game.lastTimeUpdated = rl.GetTime()
-	game.totalTimeRunning += rl.GetFrameTime()
+	level.lastTimeUpdated = rl.GetTime()
+	level.totalTimeRunning += rl.GetFrameTime()
 }
 
 func areStonesStill(level *Level) bool {
@@ -516,13 +516,13 @@ func handleMouseMove(level *Level) {
 		level.action = StoneHit
 	}
 
-	if level.status == GameOver && rl.IsKeyDown(rl.KeySpace) {
+	if level.status == Finished && rl.IsKeyDown(rl.KeySpace) {
 		level.status = Uninitialized
 	}
 }
 
 func handleCpuMove(level *Level, window *Window) {
-	if !level.stonesAreStill || level.status == GameOver {
+	if !level.stonesAreStill || level.status == Finished {
 		return
 	}
 
@@ -634,7 +634,7 @@ func drawScore(screenWidth, screenHeight float32, level *Level) {
 func draw(level *Level, window *Window) {
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
-	if level.status == GameOver {
+	if level.status == Finished {
 		whoWon := level.playerSettings[PlayerOne].label
 		if level.score[PlayerOne] == 0 {
 			whoWon = level.playerSettings[PlayerTwo].label

@@ -42,9 +42,10 @@ const (
 
 type Scene interface {
 	GetId() SceneId
-	HandleUserInput()
-	Update()
-	Draw()
+	Init(window *Window)
+	HandleUserInput(window *Window)
+	Update(window *Window)
+	Draw(window *Window)
 }
 
 type GameSettings struct{}
@@ -65,13 +66,50 @@ func NewGame() Game {
 	}
 }
 
+func (g *Game) Init(window *Window) {
+	screenWidth, screenHeight := window.GetScreenDimensions()
+	// magic numbers
+	// ratio is computed based on 2560 x 1440
+	VelocityDampingFactor = 0.987
+	VelocityThresholdToStop = screenWidth / 6_000
+	MaxPullLengthAllowed = 0.1 * screenWidth
+	MaxPushVelocityAllowed = 0.008 * screenWidth
+	MaxParticleSpeed = 0.008 * screenWidth
+	MaxShardRadius = screenWidth / 256
+	StoneRadius = screenHeight * 0.06
+	FontSize = screenWidth * 0.25
+
+	// initialize the scene
+	g.currentScene = Levels
+	scene := NewSceneLevelsBasic()
+	scene.Init(window)
+	g.scenes[Levels] = &scene
+	// set the init status
+	g.status = GameInitialized
+}
+
+func (g *Game) Update(window *Window) {
+	scene := g.scenes[g.currentScene]
+
+	scene.HandleUserInput(window)
+	scene.Update(window)
+}
+
+func (g *Game) Draw(window *Window) {
+	scene := g.scenes[g.currentScene]
+
+	// draw background
+	rl.ClearBackground(BG_COLOR)
+	scene.Draw(window)
+}
+
 func main() {
+	game := NewGame()
 	window := Window{
 		fullscreen: true,
 		width:      1280,
 		height:     720,
 	}
-	level := newLevel()
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
 
@@ -87,48 +125,15 @@ func main() {
 	defer rl.CloseWindow()
 
 	for !rl.WindowShouldClose() {
-		if level.status == Uninitialized {
-			screenWidth, screenHeight := window.GetScreenDimensions()
-			// magic numbers
-			// ratio is computed based on 2560 x 1440
-			VelocityDampingFactor = 0.987
-			VelocityThresholdToStop = screenWidth / 6_000
-			MaxPullLengthAllowed = 0.1 * screenWidth
-			MaxPushVelocityAllowed = 0.008 * screenWidth
-			MaxParticleSpeed = 0.008 * screenWidth
-			MaxShardRadius = screenWidth / 256
-			StoneRadius = screenHeight * 0.06
-			FontSize = screenWidth * 0.25
-			// init
-			level = newLevel()
-			level.init(&window)
+		if game.status == GameUninitialized {
+			(&game).Init(&window)
 		}
 
-		if rl.IsKeyDown(rl.KeyS) {
-			if level.status == Stopped {
-				level.status = Initialized
-			} else {
-				level.status = Stopped
-			}
-		}
-
-		level.stonesAreStill = areStonesStill(&level)
-
-		if level.status != Stopped {
-			if level.playerTurn == PlayerOne {
-				handleMouseMove(&level)
-			} else {
-				handleCpuMove(&level, &window)
-			}
-			update(&level, &window)
-		}
+		game.Update(&window)
 
 		rl.BeginDrawing()
 
-		// draw background
-		rl.ClearBackground(BG_COLOR)
-
-		draw(&level, &window)
+		game.Draw(&window)
 
 		rl.EndDrawing()
 	}
