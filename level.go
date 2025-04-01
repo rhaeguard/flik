@@ -81,7 +81,7 @@ type Level struct {
 // generates a random formation of 6 stones in a 3x4 matrix
 func generateFormation() [12]bool {
 	a := [12]bool{
-		true, true, true, true, true, true,
+		false, false, false, false, false, true,
 		false, false, false, false, false, false,
 	}
 	rand.Shuffle(12, func(i, j int) { a[i], a[j] = a[j], a[i] })
@@ -227,7 +227,8 @@ type collisionPair struct {
 	magnitude      float32
 }
 
-func update(level *Level, window *Window) {
+func update(level *Level, window *Window) (SceneId, *Level) {
+	nextSceneId := Levels
 	seen := map[string]bool{}
 	collidingPairs := []collisionPair{}
 	for i := range level.stones {
@@ -470,11 +471,14 @@ func update(level *Level, window *Window) {
 		if scorePlayerOne*scorePlayerTwo == 0 {
 			level.status = Finished
 			level.playerTurn = PlayerOne
+			nextSceneId = GameOver
 		}
 	}
 
 	level.lastTimeUpdated = rl.GetTime()
 	level.totalTimeRunning += rl.GetFrameTime()
+
+	return nextSceneId, level
 }
 
 func areStonesStill(level *Level) bool {
@@ -516,9 +520,9 @@ func handleMouseMove(level *Level) {
 		level.action = StoneHit
 	}
 
-	if level.status == Finished && rl.IsKeyDown(rl.KeySpace) {
-		level.status = Uninitialized
-	}
+	// if level.status == Finished && rl.IsKeyDown(rl.KeySpace) {
+	// 	level.status = Uninitialized
+	// }
 }
 
 func handleCpuMove(level *Level, window *Window) {

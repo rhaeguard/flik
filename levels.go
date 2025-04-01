@@ -10,7 +10,7 @@ func NewSceneLevelsBasic() SceneLevelsBasic {
 	return SceneLevelsBasic{}
 }
 
-func (scene *SceneLevelsBasic) Init(window *Window) {
+func (scene *SceneLevelsBasic) Init(data any, window *Window) {
 	// init
 	level := newLevel()
 	level.init(window)
@@ -39,10 +39,13 @@ func (scene *SceneLevelsBasic) HandleUserInput(window *Window) {
 		}
 	}
 }
-func (scene *SceneLevelsBasic) Update(window *Window) {
+func (scene *SceneLevelsBasic) Update(window *Window) (SceneId, any) {
+	nextSceneId := scene.GetId()
+	var levelData any = nil
 	if scene.level.status != Stopped {
-		update(&scene.level, window)
+		nextSceneId, levelData = update(&scene.level, window)
 	}
+	return nextSceneId, levelData
 }
 func (scene *SceneLevelsBasic) Draw(window *Window) {
 	draw(&scene.level, window)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -33,8 +34,7 @@ const (
 	Main     SceneId = iota
 	Settings SceneId = iota
 	Levels   SceneId = iota
-	Win      SceneId = iota
-	Loss     SceneId = iota
+	GameOver SceneId = iota
 	// game status
 	GameUninitialized GameStatus = iota
 	GameInitialized   GameStatus = iota
@@ -42,9 +42,9 @@ const (
 
 type Scene interface {
 	GetId() SceneId
-	Init(window *Window)
+	Init(data any, window *Window)
 	HandleUserInput(window *Window)
-	Update(window *Window)
+	Update(window *Window) (SceneId, any)
 	Draw(window *Window)
 }
 
@@ -79,12 +79,17 @@ func (g *Game) Init(window *Window) {
 	StoneRadius = screenHeight * 0.06
 	FontSize = screenWidth * 0.25
 
-	// initialize the scene
-	g.currentScene = Levels
-	scene := NewSceneLevelsBasic()
-	scene.Init(window)
-	g.scenes[Levels] = &scene
+	// initialize the gameLevelScene
+	gameLevelScene := NewSceneLevelsBasic()
+	// gameLevelScene.Init(nil, window)
+	g.scenes[Levels] = &gameLevelScene
+
+	gameOverScene := NewSceneGameOver()
+	g.scenes[GameOver] = &gameOverScene
+
 	// set the init status
+	g.currentScene = Levels
+	g.scenes[g.currentScene].Init(nil, window)
 	g.status = GameInitialized
 }
 
@@ -92,7 +97,13 @@ func (g *Game) Update(window *Window) {
 	scene := g.scenes[g.currentScene]
 
 	scene.HandleUserInput(window)
-	scene.Update(window)
+
+	nextSceneId, data := scene.Update(window)
+	fmt.Printf("%d -> %d : %t\n", g.currentScene, nextSceneId, data == nil)
+	if g.currentScene != nextSceneId {
+		g.scenes[nextSceneId].Init(data, window)
+		g.currentScene = nextSceneId
+	}
 }
 
 func (g *Game) Draw(window *Window) {
