@@ -83,7 +83,7 @@ type Level struct {
 	levelSettings                  LevelSettings
 }
 
-func newLevel() Level {
+func newLevel(levelSettings LevelSettings) Level {
 	return Level{
 		status:                         Uninitialized,
 		lastTimeUpdated:                0.0,
@@ -117,9 +117,7 @@ func newLevel() Level {
 				rocketColor:    rl.NewColor(129, 13, 32, 255),
 			},
 		},
-		levelSettings: LevelSettings{
-			backgroundColor: BG_COLOR,
-		},
+		levelSettings: levelSettings,
 	}
 }
 
@@ -131,7 +129,7 @@ func (level *Level) init(window *Window) {
 // generates a random formation of 6 stones in a 3x4 matrix
 func generateFormation() [12]bool {
 	a := [12]bool{
-		true, true, true, true, true, true,
+		!true, !true, !true, !true, true, true,
 		false, false, false, false, false, false,
 	}
 	rand.Shuffle(12, func(i, j int) { a[i], a[j] = a[j], a[i] })
@@ -248,9 +246,7 @@ type collisionPair struct {
 	magnitude      float32
 }
 
-func (level *Level) update(window *Window) (SceneId, *Level) {
-	nextSceneId := LevelBasic
-
+func (level *Level) update(window *Window) {
 	collidingPairs := []collisionPair{}
 	allStonesCount := len(level.stones)
 	for i := range allStonesCount {
@@ -482,15 +478,12 @@ func (level *Level) update(window *Window) (SceneId, *Level) {
 		if scorePlayerOne*scorePlayerTwo == 0 {
 			level.status = Finished
 			level.playerTurn = PlayerOne
-			nextSceneId = GameOver
 		}
 	}
 
 	level.checkStonesForMovements()
 	level.lastTimeUpdated = rl.GetTime()
 	level.totalTimeRunning += rl.GetFrameTime()
-
-	return nextSceneId, level
 }
 
 func (level *Level) setAimVectorStart(aimVectorStart rl.Vector2) {

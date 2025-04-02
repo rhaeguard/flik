@@ -62,8 +62,11 @@ func (g *Game) Init(window *Window) {
 	mainScene := NewSceneMain()
 	g.scenes[Main] = &mainScene
 
-	gameLevelScene := NewSceneLevelsBasic()
-	g.scenes[LevelBasic] = &gameLevelScene
+	levelBasic := NewSceneLevelsBasic()
+	g.scenes[LevelBasic] = &levelBasic
+
+	levelBordered := NewSceneLevelsBordered()
+	g.scenes[LevelBordered] = &levelBordered
 
 	gameOverScene := NewSceneGameOver()
 	g.scenes[GameOver] = &gameOverScene
@@ -89,6 +92,7 @@ func (g *Game) Update(window *Window) uint8 {
 	}
 
 	if g.currentScene != nextSceneId {
+		// fmt.Printf("Scene change [%d => %d]\n", g.currentScene, nextSceneId)
 		g.scenes[nextSceneId].Init(data, window)
 		g.currentScene = nextSceneId
 	}
@@ -104,6 +108,7 @@ func (g *Game) Draw(window *Window) {
 func (g *Game) Teardown(window *Window) {
 	g.scenes[Main].Teardown(window)
 	g.scenes[LevelBasic].Teardown(window)
+	g.scenes[LevelBordered].Teardown(window)
 	g.scenes[Controls].Teardown(window)
 	g.scenes[GameOver].Teardown(window)
 }
