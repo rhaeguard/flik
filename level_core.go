@@ -657,37 +657,7 @@ func drawScore(screenWidth, screenHeight float32, level *Level) {
 func draw(level *Level, window *Window) {
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
-	if level.status == Finished {
-		whoWon := level.playerSettings[PlayerOne].label
-		if level.score[PlayerOne] == 0 {
-			whoWon = level.playerSettings[PlayerTwo].label
-		}
-		whoWon = fmt.Sprintf("%s won!", whoWon)
-		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), whoWon, 200, 10)
-		w := (screenWidth - measuredSize.X) / 2
-		h := (screenHeight - measuredSize.Y) / 2
-
-		rl.DrawTextEx(
-			rl.GetFontDefault(),
-			whoWon,
-			rl.NewVector2(w, h),
-			200,
-			10,
-			dimWhite(60),
-		)
-
-		message2 := rl.MeasureTextEx(rl.GetFontDefault(), "press space to restart", 50, 10)
-		w = (screenWidth - message2.X) / 2
-		h = h + measuredSize.Y*1.5
-		rl.DrawTextEx(
-			rl.GetFontDefault(),
-			"press space to restart",
-			rl.NewVector2(w, h),
-			50,
-			10,
-			dimWhite(60),
-		)
-	} else {
+	if level.status != Finished {
 		drawScore(screenWidth, screenHeight, level)
 
 		// draw the vertical centre line
