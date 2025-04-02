@@ -63,7 +63,7 @@ func (g *Game) Init(window *Window) {
 	g.scenes[Main] = &mainScene
 
 	gameLevelScene := NewSceneLevelsBasic()
-	g.scenes[Levels] = &gameLevelScene
+	g.scenes[LevelBasic] = &gameLevelScene
 
 	gameOverScene := NewSceneGameOver()
 	g.scenes[GameOver] = &gameOverScene
@@ -98,15 +98,12 @@ func (g *Game) Update(window *Window) uint8 {
 
 func (g *Game) Draw(window *Window) {
 	scene := g.scenes[g.currentScene]
-
-	// draw background
-	rl.ClearBackground(BG_COLOR)
 	scene.Draw(window)
 }
 
 func (g *Game) Teardown(window *Window) {
 	g.scenes[Main].Teardown(window)
-	g.scenes[Levels].Teardown(window)
+	g.scenes[LevelBasic].Teardown(window)
 	g.scenes[Controls].Teardown(window)
 	g.scenes[GameOver].Teardown(window)
 }

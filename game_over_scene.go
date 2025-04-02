@@ -26,7 +26,7 @@ func (scene *SceneGameOver) Init(data any, window *Window) {
 
 func (scene *SceneGameOver) HandleUserInput(window *Window) {
 	if rl.IsKeyDown(rl.KeySpace) {
-		scene.nextSceneId = Levels
+		scene.nextSceneId = LevelBasic
 	}
 }
 
@@ -39,6 +39,8 @@ func (scene *SceneGameOver) Update(window *Window) (SceneId, any) {
 }
 
 func (scene *SceneGameOver) Draw(window *Window) {
+	// draw background
+	rl.ClearBackground(BG_COLOR)
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
 	whoWon := scene.data.playerSettings[PlayerOne].label
