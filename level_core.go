@@ -229,39 +229,29 @@ type collisionPair struct {
 
 func update(level *Level, window *Window) (SceneId, *Level) {
 	nextSceneId := Levels
-	seen := map[string]bool{}
+
 	collidingPairs := []collisionPair{}
-	for i := range level.stones {
+	allStonesCount := len(level.stones)
+	for i := range allStonesCount {
 		a := &level.stones[i]
 		if a.isDead {
 			continue
 		}
-		for j := range level.stones {
-			if i == j {
-				continue
-			}
-
+		for j := i + 1; j < allStonesCount; j++ {
 			b := &level.stones[j]
 
 			if b.isDead {
 				continue
 			}
 
-			key := fmt.Sprintf("%d-%d", i, j)
-			if _, ok := seen[key]; ok {
-				continue
-			}
-
 			if rl.CheckCollisionCircles(a.pos, a.radius, b.pos, b.radius) {
-				seen[fmt.Sprintf("%d-%d", i, j)] = true
-				seen[fmt.Sprintf("%d-%d", j, i)] = true
-				intersection := rl.Vector2Scale(rl.Vector2Add(a.pos, b.pos), 0.5)
+				collisionPoint := rl.Vector2Scale(rl.Vector2Add(a.pos, b.pos), 0.5)
 
 				combinedVelocity := rl.Vector2Add(a.velocity, b.velocity)
 
 				collisionMagnitude := (2 * rl.Vector2Length(combinedVelocity)) / MaxPushVelocityAllowed
 
-				collidingPairs = append(collidingPairs, collisionPair{a, b, intersection, collisionMagnitude})
+				collidingPairs = append(collidingPairs, collisionPair{a, b, collisionPoint, collisionMagnitude})
 			}
 		}
 	}

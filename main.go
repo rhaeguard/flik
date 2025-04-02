@@ -25,30 +25,13 @@ func dimWhite(alpha uint8) color.RGBA {
 	return rl.NewColor(255, 255, 255, alpha)
 }
 
-type SceneId uint8
 type GameStatus uint8
 
 const (
-	// scenes
-	Main     SceneId = iota
-	Settings SceneId = iota
-	Levels   SceneId = iota
-	Controls SceneId = iota
-	GameOver SceneId = iota
-	Quit     SceneId = iota
 	// game status
 	GameUninitialized GameStatus = iota
 	GameInitialized   GameStatus = iota
 )
-
-type Scene interface {
-	GetId() SceneId
-	Init(data any, window *Window)
-	HandleUserInput(window *Window)
-	Update(window *Window) (SceneId, any)
-	Draw(window *Window)
-	Teardown(window *Window)
-}
 
 type GameSettings struct{}
 
@@ -127,12 +110,19 @@ func (g *Game) Draw(window *Window) {
 	scene.Draw(window)
 }
 
+func (g *Game) Teardown(window *Window) {
+	g.scenes[Main].Teardown(window)
+	g.scenes[Levels].Teardown(window)
+	g.scenes[Controls].Teardown(window)
+	g.scenes[GameOver].Teardown(window)
+}
+
 func main() {
 	game := NewGame()
 	window := Window{
 		fullscreen: true,
-		width:      1280,
-		height:     720,
+		width:      14401280,
+		height:     810,
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
@@ -164,10 +154,5 @@ func main() {
 		rl.EndDrawing()
 	}
 
-	game.scenes[Main].Teardown(&window)
-	// game.scenes[Settings].Teardown(&window)
-	game.scenes[Levels].Teardown(&window)
-	game.scenes[Controls].Teardown(&window)
-	game.scenes[GameOver].Teardown(&window)
-	// game.scenes[Quit].Teardown(&window)
+	game.Teardown(&window)
 }
