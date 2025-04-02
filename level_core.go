@@ -134,8 +134,8 @@ func newLevel() Level {
 		allParticles:                   []Particle{},
 		allShards:                      []Shard{},
 		score: map[Player]uint8{
-			PlayerOne: 6,
-			PlayerTwo: 6,
+			PlayerOne: 0,
+			PlayerTwo: 0,
 		},
 		playerTurn:     PlayerOne,
 		stonesAreStill: true,
@@ -465,10 +465,29 @@ func update(level *Level, window *Window) (SceneId, *Level) {
 		}
 	}
 
+	level.stonesAreStill = areStonesStill(level)
 	level.lastTimeUpdated = rl.GetTime()
 	level.totalTimeRunning += rl.GetFrameTime()
 
 	return nextSceneId, level
+}
+
+func handleUserInput(level *Level, window *Window) {
+	if rl.IsKeyDown(rl.KeyS) {
+		if level.status == Stopped {
+			level.status = Initialized
+		} else {
+			level.status = Stopped
+		}
+	}
+
+	if level.status != Stopped {
+		if level.playerTurn == PlayerOne {
+			handleMouseMove(level)
+		} else {
+			handleCpuMove(level, window)
+		}
+	}
 }
 
 func areStonesStill(level *Level) bool {
@@ -509,21 +528,6 @@ func handleMouseMove(level *Level) {
 	if rl.IsMouseButtonReleased(rl.MouseButtonLeft) && level.action == StoneAimed {
 		level.action = StoneHit
 	}
-}
-
-// line a and line b intersection
-// reference: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
-func getLineToLineIntersectionPoint(as, ae, bs, be rl.Vector2) (rl.Vector2, bool) {
-	uA := ((be.X-bs.X)*(as.Y-bs.Y) - (be.Y-bs.Y)*(as.X-bs.X)) / ((be.Y-bs.Y)*(ae.X-as.X) - (be.X-bs.X)*(ae.Y-as.Y))
-	uB := ((ae.X-as.X)*(as.Y-bs.Y) - (ae.Y-as.Y)*(as.X-bs.X)) / ((be.Y-bs.Y)*(ae.X-as.X) - (be.X-bs.X)*(ae.Y-as.Y))
-
-	if uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1 {
-		// intersection points
-		x := as.X + (uA * (ae.X - as.X))
-		y := as.Y + (uA * (ae.Y - as.Y))
-		return rl.NewVector2(x, y), true
-	}
-	return rl.NewVector2(0, 0), false
 }
 
 func handleCpuMove(level *Level, window *Window) {

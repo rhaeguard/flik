@@ -1,7 +1,5 @@
 package main
 
-import rl "github.com/gen2brain/raylib-go/raylib"
-
 type SceneLevelsBasic struct {
 	level Level
 }
@@ -21,23 +19,7 @@ func (scene *SceneLevelsBasic) GetId() SceneId {
 	return Levels
 }
 func (scene *SceneLevelsBasic) HandleUserInput(window *Window) {
-	if rl.IsKeyDown(rl.KeyS) {
-		if scene.level.status == Stopped {
-			scene.level.status = Initialized
-		} else {
-			scene.level.status = Stopped
-		}
-	}
-
-	scene.level.stonesAreStill = areStonesStill(&scene.level)
-
-	if scene.level.status != Stopped {
-		if scene.level.playerTurn == PlayerOne {
-			handleMouseMove(&scene.level)
-		} else {
-			handleCpuMove(&scene.level, window)
-		}
-	}
+	handleUserInput(&scene.level, window)
 }
 func (scene *SceneLevelsBasic) Update(window *Window) (SceneId, any) {
 	nextSceneId := scene.GetId()

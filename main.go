@@ -1,8 +1,6 @@
 package main
 
 import (
-	"image/color"
-
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -20,10 +18,6 @@ var FontSize float32
 // shards and particles
 var MaxParticleSpeed float32
 var MaxShardRadius float32
-
-func dimWhite(alpha uint8) color.RGBA {
-	return rl.NewColor(255, 255, 255, alpha)
-}
 
 type GameStatus uint8
 
