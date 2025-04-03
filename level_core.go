@@ -777,8 +777,8 @@ func drawScore(screenWidth, screenHeight float32, level *Level) {
 
 	defaultFont := rl.GetFontDefault()
 
-	p1Score := fmt.Sprintf("0%d", level.score[PlayerOne])
-	p2Score := fmt.Sprintf("0%d", level.score[PlayerTwo])
+	p1Score := fmt.Sprintf("%02d", level.score[PlayerOne])
+	p2Score := fmt.Sprintf("%02d", level.score[PlayerTwo])
 
 	measuredSize := rl.MeasureTextEx(defaultFont, "00", FontSize, FontSize/10)
 
