@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -60,6 +61,8 @@ type PlayerSettings struct {
 }
 
 type LevelSettings struct {
+	isBordered      bool
+	boundary        rl.Rectangle
 	backgroundColor rl.Color
 }
 
@@ -97,8 +100,8 @@ func newLevel(levelSettings LevelSettings) Level {
 		allShards:                      []Shard{},
 		stonesAreStill:                 true,
 		score: map[Player]uint8{
-			PlayerOne: 0,
-			PlayerTwo: 0,
+			PlayerOne: 6,
+			PlayerTwo: 6,
 		},
 		playerTurn: PlayerOne,
 		playerSettings: map[Player]PlayerSettings{
@@ -129,7 +132,7 @@ func (level *Level) init(window *Window) {
 // generates a random formation of 6 stones in a 3x4 matrix
 func generateFormation() [12]bool {
 	a := [12]bool{
-		!true, !true, !true, !true, true, true,
+		true, true, true, true, true, true,
 		false, false, false, false, false, false,
 	}
 	rand.Shuffle(12, func(i, j int) { a[i], a[j] = a[j], a[i] })
@@ -247,6 +250,55 @@ type collisionPair struct {
 }
 
 func (level *Level) update(window *Window) {
+
+	if level.levelSettings.isBordered {
+		boundary := level.levelSettings.boundary
+
+		allStonesCount := len(level.stones)
+		for i := range allStonesCount {
+			a := &level.stones[i]
+			if a.isDead {
+				continue
+			}
+
+			wallCollision := false
+
+			if a.pos.X-a.radius < 0 {
+				pd := math.Abs(float64(a.pos.X) - float64(a.radius))
+				a.pos.X += float32(pd)
+				a.velocity.X *= -1
+				wallCollision = true
+
+			} else if a.pos.X+a.radius > boundary.Width {
+				pd := math.Abs(float64(a.pos.X+a.radius) - float64(boundary.Width))
+				a.pos.X -= float32(pd)
+				a.velocity.X *= -1
+				wallCollision = true
+
+			}
+
+			if a.pos.Y-a.radius < 0 {
+				pd := math.Abs(float64(a.pos.Y) - float64(a.radius))
+				a.pos.Y += float32(pd)
+				a.velocity.Y *= -1
+				wallCollision = true
+
+			} else if a.pos.Y+a.radius > boundary.Height {
+				pd := math.Abs(float64(a.pos.Y+a.radius) - float64(boundary.Height))
+				a.pos.Y -= float32(pd)
+				a.velocity.Y *= -1
+				wallCollision = true
+
+			}
+
+			if wallCollision {
+				speedDiff := rl.Vector2Length(a.velocity)
+				amount := rl.Clamp(speedDiff, 0, MaxPushVelocityAllowed) * 2
+				a.life -= amount * 0.3 // TODO: maybe it should also depend on the angle the stone is hitting the wall
+			}
+		}
+	}
+
 	collidingPairs := []collisionPair{}
 	allStonesCount := len(level.stones)
 	for i := range allStonesCount {
@@ -567,11 +619,20 @@ func (level *Level) handleCpuMove(window *Window) {
 }
 
 func (level *Level) draw(window *Window) {
-	rl.ClearBackground(level.levelSettings.backgroundColor)
-
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
+	rl.ClearBackground(level.levelSettings.backgroundColor)
+
 	if level.status != Finished {
+
+		if level.levelSettings.isBordered {
+			rl.DrawRectangleLinesEx(
+				level.levelSettings.boundary,
+				screenWidth/255,
+				dimWhite(125),
+			)
+		}
+
 		drawScore(screenWidth, screenHeight, level)
 
 		// draw the vertical centre line

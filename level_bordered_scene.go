@@ -7,10 +7,12 @@ type SceneLevelsBordered struct {
 	levelSettings LevelSettings
 }
 
-func NewSceneLevelsBordered() SceneLevelsBordered {
+func NewSceneLevelsBordered(window *Window) SceneLevelsBordered {
 	return SceneLevelsBordered{
 		levelSettings: LevelSettings{
 			backgroundColor: rl.NewColor(230, 10, 10, 255),
+			isBordered:      true,
+			boundary:        window.GetScreenBoundary(),
 		},
 	}
 }

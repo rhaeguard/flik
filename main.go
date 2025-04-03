@@ -65,7 +65,7 @@ func (g *Game) Init(window *Window) {
 	levelBasic := NewSceneLevelsBasic()
 	g.scenes[LevelBasic] = &levelBasic
 
-	levelBordered := NewSceneLevelsBordered()
+	levelBordered := NewSceneLevelsBordered(window)
 	g.scenes[LevelBordered] = &levelBordered
 
 	gameOverScene := NewSceneGameOver()
@@ -117,8 +117,8 @@ func main() {
 	game := NewGame()
 	window := Window{
 		fullscreen: true,
-		width:      14401280,
-		height:     810,
+		width:      1920,
+		height:     1080,
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)

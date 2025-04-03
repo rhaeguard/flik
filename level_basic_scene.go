@@ -33,7 +33,7 @@ func (scene *SceneLevelsBasic) Update(window *Window) (SceneId, any) {
 	var levelData any = nil
 	if scene.level.status != Stopped {
 		scene.level.update(window)
-		if scene.level.status == Finished {
+		if scene.level.status == Finished { // TODO: this needs to be elaborate - is it a win, is it a loss?
 			nextSceneId = LevelBordered
 			levelData = scene.level
 		}
