@@ -138,7 +138,7 @@ func (g *Game) Teardown(window *Window) {
 func main() {
 	game := NewGame()
 	window := Window{
-		fullscreen: !true,
+		fullscreen: true,
 		width:      1920,
 		height:     1080,
 	}
