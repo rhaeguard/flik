@@ -24,10 +24,13 @@ func compareSearchPairs(p1, p2 searchPair) int {
 // / - whether own stone will be hit in the process
 // / - whether stone will richochet
 func cpuSearchBestOption(level *Level, window *Window) (*Stone, *Stone) {
+	me := level.playerTurn
+
 	searchPairs := []searchPair{}
+
 	for i := range level.stones {
 		actor := &level.stones[i]
-		if actor.isDead || actor.playerId == PlayerOne { // TODO: we should have better ways to indicate the opponent
+		if actor.isDead || actor.playerId != me {
 			continue
 		}
 		for j := range level.stones {
@@ -36,7 +39,7 @@ func cpuSearchBestOption(level *Level, window *Window) (*Stone, *Stone) {
 			}
 
 			target := &level.stones[j]
-			if target.isDead || target.playerId == PlayerTwo { // TODO: better way to indicate the attacking player
+			if target.isDead || target.playerId == me {
 				continue
 			}
 
@@ -72,18 +75,18 @@ func cpuSearchBestOption(level *Level, window *Window) (*Stone, *Stone) {
 			}
 			// line 1 check aTop - tTop
 			if rl.CheckCollisionCircleLine(stone.pos, stone.radius, aTop, tTop) {
-				hitsOwn = stone.playerId == PlayerTwo // better way needed?
+				hitsOwn = stone.playerId == me
 				richochets = true
 			}
 			// line 2 check aBottom - tBottom
 			if rl.CheckCollisionCircleLine(stone.pos, stone.radius, aBottom, tBottom) {
-				hitsOwn = stone.playerId == PlayerTwo
+				hitsOwn = stone.playerId == me
 				richochets = true
 			}
 
 			// line 3 check center to center
 			if rl.CheckCollisionCircleLine(stone.pos, stone.radius, actor.pos, target.pos) {
-				hitsOwn = stone.playerId == PlayerTwo
+				hitsOwn = stone.playerId == me
 				richochets = true
 			}
 
