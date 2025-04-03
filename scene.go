@@ -8,7 +8,7 @@ const (
 	LevelBasic    SceneId = iota
 	LevelBordered SceneId = iota
 	Controls      SceneId = iota
-	GameOver      SceneId = iota
+	Transition    SceneId = iota
 	Quit          SceneId = iota
 )
 

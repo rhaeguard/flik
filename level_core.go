@@ -61,6 +61,8 @@ type PlayerSettings struct {
 }
 
 type LevelSettings struct {
+	sceneId         SceneId
+	stonesPerPlayer uint8
 	isBordered      bool
 	boundary        rl.Rectangle
 	backgroundColor rl.Color
@@ -79,14 +81,19 @@ type Level struct {
 	action                         ActionEnum
 	allParticles                   []Particle
 	allShards                      []Shard
+	stonesAreStill                 bool
 	score                          map[Player]uint8
 	playerTurn                     Player
-	stonesAreStill                 bool
 	playerSettings                 map[Player]PlayerSettings
 	levelSettings                  LevelSettings
 }
 
 func newLevel(levelSettings LevelSettings) Level {
+	playerTurn := PlayerOne
+	if rand.Float32() > 0.5 {
+		playerTurn = PlayerTwo
+	}
+
 	return Level{
 		status:                         Uninitialized,
 		lastTimeUpdated:                0.0,
@@ -103,7 +110,7 @@ func newLevel(levelSettings LevelSettings) Level {
 			PlayerOne: 6,
 			PlayerTwo: 6,
 		},
-		playerTurn: PlayerOne,
+		playerTurn: playerTurn,
 		playerSettings: map[Player]PlayerSettings{
 			PlayerOne: {
 				label:          "you",
@@ -125,27 +132,32 @@ func newLevel(levelSettings LevelSettings) Level {
 }
 
 func (level *Level) init(window *Window) {
-	level.stones = generateStones(window)
+	level.stones = generateStones(level.levelSettings, window)
 	level.status = Initialized
 }
 
 // generates a random formation of 6 stones in a 3x4 matrix
-func generateFormation() [12]bool {
+func generateFormation(stonesPerPlayer uint8) [12]bool {
 	a := [12]bool{
-		true, true, true, true, true, true,
-		false, false, false, false, false, false,
+		// true, true, true, true, true, true,
+		// false, false, false, false, false, false,
 	}
+
+	for i := range int(stonesPerPlayer) {
+		a[i] = true
+	}
+
 	rand.Shuffle(12, func(i, j int) { a[i], a[j] = a[j], a[i] })
 	return a
 }
 
-func generateStones(window *Window) []Stone {
+func generateStones(levelSettings LevelSettings, window *Window) []Stone {
 	stones := []Stone{}
 
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
-	f1 := generateFormation()
-	f2 := generateFormation()
+	f1 := generateFormation(levelSettings.stonesPerPlayer)
+	f2 := generateFormation(levelSettings.stonesPerPlayer)
 
 	ids := 0
 
@@ -618,30 +630,34 @@ func (level *Level) handleCpuMove(window *Window) {
 	level.setAimVectorStart(clampedV)
 }
 
-func (level *Level) draw(window *Window) {
+func (level *Level) drawField(window *Window) {
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
 	rl.ClearBackground(level.levelSettings.backgroundColor)
 
-	if level.status != Finished {
-
-		if level.levelSettings.isBordered {
-			rl.DrawRectangleLinesEx(
-				level.levelSettings.boundary,
-				screenWidth/255,
-				dimWhite(125),
-			)
-		}
-
-		drawScore(screenWidth, screenHeight, level)
-
-		// draw the vertical centre line
-		rl.DrawLineEx(
-			rl.NewVector2(screenWidth/2, 0),
-			rl.NewVector2(screenWidth/2, screenHeight),
-			screenWidth/256,
+	if level.levelSettings.isBordered {
+		rl.DrawRectangleLinesEx(
+			level.levelSettings.boundary,
+			screenWidth/255,
 			dimWhite(125),
 		)
+	}
+
+	drawScore(screenWidth, screenHeight, level)
+
+	// draw the vertical centre line
+	rl.DrawLineEx(
+		rl.NewVector2(screenWidth/2, 0),
+		rl.NewVector2(screenWidth/2, screenHeight),
+		screenWidth/256,
+		dimWhite(125),
+	)
+}
+
+func (level *Level) draw(window *Window) {
+
+	{
+		level.drawField(window)
 
 		// draw the aim bubbles
 		if level.action == StoneAimed {

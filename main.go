@@ -68,8 +68,8 @@ func (g *Game) Init(window *Window) {
 	levelBordered := NewSceneLevelsBordered(window)
 	g.scenes[LevelBordered] = &levelBordered
 
-	gameOverScene := NewSceneGameOver()
-	g.scenes[GameOver] = &gameOverScene
+	gameOverScene := NewSceneTransition()
+	g.scenes[Transition] = &gameOverScene
 
 	controlsScene := NewSceneControls()
 	g.scenes[Controls] = &controlsScene
@@ -93,6 +93,9 @@ func (g *Game) Update(window *Window) uint8 {
 
 	if g.currentScene != nextSceneId {
 		// fmt.Printf("Scene change [%d => %d]\n", g.currentScene, nextSceneId)
+		// TODO: it is possible that if we go to the Game Over screen twice
+		// TODO: it will just append to the existing struct instance instead of creating a totally new screen
+		// TODO: this can be bad because it can result in weird errors.
 		g.scenes[nextSceneId].Init(data, window)
 		g.currentScene = nextSceneId
 	}
@@ -110,13 +113,13 @@ func (g *Game) Teardown(window *Window) {
 	g.scenes[LevelBasic].Teardown(window)
 	g.scenes[LevelBordered].Teardown(window)
 	g.scenes[Controls].Teardown(window)
-	g.scenes[GameOver].Teardown(window)
+	g.scenes[Transition].Teardown(window)
 }
 
 func main() {
 	game := NewGame()
 	window := Window{
-		fullscreen: true,
+		fullscreen: !true,
 		width:      1920,
 		height:     1080,
 	}

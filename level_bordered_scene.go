@@ -10,6 +10,8 @@ type SceneLevelsBordered struct {
 func NewSceneLevelsBordered(window *Window) SceneLevelsBordered {
 	return SceneLevelsBordered{
 		levelSettings: LevelSettings{
+			sceneId:         LevelBordered,
+			stonesPerPlayer: 4,
 			backgroundColor: rl.NewColor(230, 10, 10, 255),
 			isBordered:      true,
 			boundary:        window.GetScreenBoundary(),
@@ -38,7 +40,7 @@ func (scene *SceneLevelsBordered) Update(window *Window) (SceneId, any) {
 	if scene.level.status != Stopped {
 		scene.level.update(window)
 		if scene.level.status == Finished {
-			nextSceneId = GameOver
+			nextSceneId = Transition
 			levelData = &scene.level
 		}
 	}

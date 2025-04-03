@@ -8,6 +8,8 @@ type SceneLevelsBasic struct {
 func NewSceneLevelsBasic() SceneLevelsBasic {
 	return SceneLevelsBasic{
 		levelSettings: LevelSettings{
+			sceneId:         LevelBasic,
+			stonesPerPlayer: 6,
 			backgroundColor: BG_COLOR,
 		},
 	}
@@ -34,8 +36,8 @@ func (scene *SceneLevelsBasic) Update(window *Window) (SceneId, any) {
 	if scene.level.status != Stopped {
 		scene.level.update(window)
 		if scene.level.status == Finished { // TODO: this needs to be elaborate - is it a win, is it a loss?
-			nextSceneId = LevelBordered
-			levelData = scene.level
+			nextSceneId = Transition
+			levelData = &scene.level
 		}
 	}
 	return nextSceneId, levelData
