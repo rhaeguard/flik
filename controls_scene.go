@@ -130,6 +130,9 @@ func (scene *SceneControls) Update(window *Window) (SceneId, any) {
 }
 
 func (scene *SceneControls) Draw(window *Window) {
+	// draw background
+	rl.ClearBackground(BG_COLOR)
+
 	for _, e := range scene.sceneElements {
 		dimValue := 100
 		if e.active {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -59,6 +60,16 @@ type PlayerSettings struct {
 	rocketColor    rl.Color
 }
 
+type LevelSettings struct {
+	sceneId             SceneId
+	stonesPerPlayer     uint8
+	isBordered          bool
+	isTimed             bool
+	totalSecondsAllowed uint8
+	boundary            rl.Rectangle
+	backgroundColor     rl.Color
+}
+
 type Level struct {
 	status                         LevelStatus
 	lastTimeUpdated                float64
@@ -72,29 +83,83 @@ type Level struct {
 	action                         ActionEnum
 	allParticles                   []Particle
 	allShards                      []Shard
+	stonesAreStill                 bool
 	score                          map[Player]uint8
 	playerTurn                     Player
-	stonesAreStill                 bool
 	playerSettings                 map[Player]PlayerSettings
+	levelSettings                  LevelSettings
+}
+
+func newLevel(levelSettings LevelSettings) Level {
+	playerTurn := PlayerOne
+	if rand.Float32() > 0.5 {
+		playerTurn = PlayerTwo
+	}
+
+	return Level{
+		status:                         Uninitialized,
+		lastTimeUpdated:                0.0,
+		totalTimeRunning:               0.0,
+		stones:                         []Stone{},
+		selectedStone:                  nil,
+		selectedStoneRotAnimationAngle: 0.0,
+		hitStoneMoving:                 nil,
+		action:                         NoAction,
+		allParticles:                   []Particle{},
+		allShards:                      []Shard{},
+		stonesAreStill:                 true,
+		score: map[Player]uint8{
+			PlayerOne: 6,
+			PlayerTwo: 6,
+		},
+		playerTurn: playerTurn,
+		playerSettings: map[Player]PlayerSettings{
+			PlayerOne: {
+				label:          "you",
+				primaryColor:   rl.NewColor(55, 113, 142, 255),
+				outerRingColor: rl.NewColor(37, 78, 112, 255),
+				lifeColor:      rl.NewColor(255, 250, 255, 255),
+				rocketColor:    rl.SkyBlue,
+			},
+			PlayerTwo: {
+				label:          "cpu",
+				primaryColor:   rl.NewColor(133, 90, 92, 255),
+				outerRingColor: rl.NewColor(102, 16, 31, 255),
+				lifeColor:      rl.NewColor(255, 250, 255, 255),
+				rocketColor:    rl.NewColor(129, 13, 32, 255),
+			},
+		},
+		levelSettings: levelSettings,
+	}
+}
+
+func (level *Level) init(window *Window) {
+	level.stones = generateStones(level.levelSettings, window)
+	level.status = Initialized
 }
 
 // generates a random formation of 6 stones in a 3x4 matrix
-func generateFormation() [12]bool {
+func generateFormation(stonesPerPlayer uint8) [12]bool {
 	a := [12]bool{
-		true, true, true, true, true, true,
-		false, false, false, false, false, false,
+		// true, true, true, true, true, true,
+		// false, false, false, false, false, false,
 	}
+
+	for i := range int(stonesPerPlayer) {
+		a[i] = true
+	}
+
 	rand.Shuffle(12, func(i, j int) { a[i], a[j] = a[j], a[i] })
 	return a
 }
 
-func generateStones(window *Window) []Stone {
+func generateStones(levelSettings LevelSettings, window *Window) []Stone {
 	stones := []Stone{}
 
 	screenWidth, screenHeight := window.GetScreenDimensions()
 
-	f1 := generateFormation()
-	f2 := generateFormation()
+	f1 := generateFormation(levelSettings.stonesPerPlayer)
+	f2 := generateFormation(levelSettings.stonesPerPlayer)
 
 	ids := 0
 
@@ -119,48 +184,6 @@ func generateStones(window *Window) []Stone {
 	}
 
 	return stones
-}
-
-func newLevel() Level {
-	return Level{
-		status:                         Uninitialized,
-		lastTimeUpdated:                0.0,
-		totalTimeRunning:               0.0,
-		stones:                         []Stone{},
-		selectedStone:                  nil,
-		selectedStoneRotAnimationAngle: 0.0,
-		hitStoneMoving:                 nil,
-		action:                         NoAction,
-		allParticles:                   []Particle{},
-		allShards:                      []Shard{},
-		score: map[Player]uint8{
-			PlayerOne: 6,
-			PlayerTwo: 6,
-		},
-		playerTurn:     PlayerOne,
-		stonesAreStill: true,
-		playerSettings: map[Player]PlayerSettings{
-			PlayerOne: {
-				label:          "you",
-				primaryColor:   rl.NewColor(55, 113, 142, 255),
-				outerRingColor: rl.NewColor(37, 78, 112, 255),
-				lifeColor:      rl.NewColor(255, 250, 255, 255),
-				rocketColor:    rl.SkyBlue,
-			},
-			PlayerTwo: {
-				label:          "cpu",
-				primaryColor:   rl.NewColor(133, 90, 92, 255),
-				outerRingColor: rl.NewColor(102, 16, 31, 255),
-				lifeColor:      rl.NewColor(255, 250, 255, 255),
-				rocketColor:    rl.NewColor(129, 13, 32, 255),
-			},
-		},
-	}
-}
-
-func (g *Level) init(w *Window) {
-	g.stones = generateStones(w)
-	g.status = Initialized
 }
 
 // do not allow objects to penetrate into each other
@@ -221,47 +244,97 @@ func calcVelocity(s *Stone) {
 	}
 }
 
+func (level *Level) checkStonesForMovements() {
+	for _, stone := range level.stones {
+		if stone.isDead {
+			continue
+		}
+		if rl.Vector2Length(stone.velocity) != 0 {
+			level.stonesAreStill = false
+			return
+		}
+	}
+	level.stonesAreStill = true
+}
+
 type collisionPair struct {
 	a, b           *Stone
 	collisionPoint rl.Vector2
 	magnitude      float32
 }
 
-func update(level *Level, window *Window) (SceneId, *Level) {
-	nextSceneId := Levels
-	seen := map[string]bool{}
+func (level *Level) update(window *Window) {
+
+	if level.levelSettings.isBordered {
+		boundary := level.levelSettings.boundary
+
+		allStonesCount := len(level.stones)
+		for i := range allStonesCount {
+			a := &level.stones[i]
+			if a.isDead {
+				continue
+			}
+
+			wallCollision := false
+
+			if a.pos.X-a.radius < 0 {
+				pd := math.Abs(float64(a.pos.X) - float64(a.radius))
+				a.pos.X += float32(pd)
+				a.velocity.X *= -1
+				wallCollision = true
+
+			} else if a.pos.X+a.radius > boundary.Width {
+				pd := math.Abs(float64(a.pos.X+a.radius) - float64(boundary.Width))
+				a.pos.X -= float32(pd)
+				a.velocity.X *= -1
+				wallCollision = true
+
+			}
+
+			if a.pos.Y-a.radius < 0 {
+				pd := math.Abs(float64(a.pos.Y) - float64(a.radius))
+				a.pos.Y += float32(pd)
+				a.velocity.Y *= -1
+				wallCollision = true
+
+			} else if a.pos.Y+a.radius > boundary.Height {
+				pd := math.Abs(float64(a.pos.Y+a.radius) - float64(boundary.Height))
+				a.pos.Y -= float32(pd)
+				a.velocity.Y *= -1
+				wallCollision = true
+
+			}
+
+			if wallCollision {
+				speedDiff := rl.Vector2Length(a.velocity)
+				amount := rl.Clamp(speedDiff, 0, MaxPushVelocityAllowed) * 2
+				a.life -= amount * 0.3 // TODO: maybe it should also depend on the angle the stone is hitting the wall
+			}
+		}
+	}
+
 	collidingPairs := []collisionPair{}
-	for i := range level.stones {
+	allStonesCount := len(level.stones)
+	for i := range allStonesCount {
 		a := &level.stones[i]
 		if a.isDead {
 			continue
 		}
-		for j := range level.stones {
-			if i == j {
-				continue
-			}
-
+		for j := i + 1; j < allStonesCount; j++ {
 			b := &level.stones[j]
 
 			if b.isDead {
 				continue
 			}
 
-			key := fmt.Sprintf("%d-%d", i, j)
-			if _, ok := seen[key]; ok {
-				continue
-			}
-
 			if rl.CheckCollisionCircles(a.pos, a.radius, b.pos, b.radius) {
-				seen[fmt.Sprintf("%d-%d", i, j)] = true
-				seen[fmt.Sprintf("%d-%d", j, i)] = true
-				intersection := rl.Vector2Scale(rl.Vector2Add(a.pos, b.pos), 0.5)
+				collisionPoint := rl.Vector2Scale(rl.Vector2Add(a.pos, b.pos), 0.5)
 
 				combinedVelocity := rl.Vector2Add(a.velocity, b.velocity)
 
 				collisionMagnitude := (2 * rl.Vector2Length(combinedVelocity)) / MaxPushVelocityAllowed
 
-				collidingPairs = append(collidingPairs, collisionPair{a, b, intersection, collisionMagnitude})
+				collidingPairs = append(collidingPairs, collisionPair{a, b, collisionPoint, collisionMagnitude})
 			}
 		}
 	}
@@ -451,6 +524,9 @@ func update(level *Level, window *Window) (SceneId, *Level) {
 		scorePlayerOne := 0
 		scorePlayerTwo := 0
 
+		totalStoneLifePointsPlayerOne := float32(0.0)
+		totalStoneLifePointsPlayerTwo := float32(0.0)
+
 		for _, stone := range level.stones {
 			if stone.isDead {
 				continue
@@ -458,50 +534,76 @@ func update(level *Level, window *Window) (SceneId, *Level) {
 
 			if stone.playerId == PlayerOne {
 				scorePlayerOne += 1
+				totalStoneLifePointsPlayerOne += stone.life
 			}
 
 			if stone.playerId == PlayerTwo {
 				scorePlayerTwo += 1
+				totalStoneLifePointsPlayerTwo += stone.life
 			}
 		}
 
 		level.score[PlayerOne] = uint8(scorePlayerOne)
 		level.score[PlayerTwo] = uint8(scorePlayerTwo)
 
-		if scorePlayerOne*scorePlayerTwo == 0 {
+		if level.levelSettings.isTimed {
+			timeLeft := level.levelSettings.totalSecondsAllowed - uint8(level.totalTimeRunning)
+			if timeLeft == 0 {
+				if level.score[PlayerOne] > level.score[PlayerTwo] {
+					level.score[PlayerTwo] = 0
+				} else if level.score[PlayerOne] < level.score[PlayerTwo] {
+					level.score[PlayerOne] = 0
+				} else {
+					// TODO: these can be elaborate than this simple heuristic, but for now it's good enough
+					if totalStoneLifePointsPlayerOne > totalStoneLifePointsPlayerTwo {
+						level.score[PlayerTwo] = 0
+					} else if totalStoneLifePointsPlayerOne < totalStoneLifePointsPlayerTwo {
+						level.score[PlayerOne] = 0
+					} else {
+						level.score[level.playerTurn] = 0 // if everything is equal when the time runs out...the one whose turn it is loses.
+					}
+				}
+			}
+		}
+
+		if level.score[PlayerOne]*level.score[PlayerTwo] == 0 {
 			level.status = Finished
 			level.playerTurn = PlayerOne
-			nextSceneId = GameOver
 		}
 	}
 
+	level.checkStonesForMovements()
 	level.lastTimeUpdated = rl.GetTime()
 	level.totalTimeRunning += rl.GetFrameTime()
-
-	return nextSceneId, level
 }
 
-func areStonesStill(level *Level) bool {
-	for _, stone := range level.stones {
-		if stone.isDead {
-			continue
-		}
-		if rl.Vector2Length(stone.velocity) != 0 {
-			return false
-		}
-	}
-	return true
-}
-
-func setAimVectorStart(aimVectorStart rl.Vector2, level *Level) {
+func (level *Level) setAimVectorStart(aimVectorStart rl.Vector2) {
 	level.aimVectorStart = aimVectorStart
 	if level.selectedStone != nil {
 		level.aimVectorForwardExtensionEnd = rl.Vector2Add(level.selectedStone.pos, rl.Vector2Negate(rl.Vector2Subtract(level.aimVectorStart, level.selectedStone.pos)))
 	}
 }
 
-func handleMouseMove(level *Level) {
-	setAimVectorStart(rl.GetMousePosition(), level)
+func (level *Level) handleUserInput(window *Window) {
+	if rl.IsKeyDown(rl.KeyS) {
+		if level.status == Stopped {
+			level.status = Initialized
+		} else {
+			level.status = Stopped
+		}
+	}
+
+	if level.status != Stopped {
+		if level.playerTurn == PlayerOne {
+			level.handleMouseMove()
+		} else {
+			level.handleCpuMove(window)
+		}
+	}
+}
+
+func (level *Level) handleMouseMove() {
+	level.setAimVectorStart(rl.GetMousePosition())
 
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) && level.stonesAreStill {
 		for i, stone := range level.stones {
@@ -519,13 +621,9 @@ func handleMouseMove(level *Level) {
 	if rl.IsMouseButtonReleased(rl.MouseButtonLeft) && level.action == StoneAimed {
 		level.action = StoneHit
 	}
-
-	// if level.status == Finished && rl.IsKeyDown(rl.KeySpace) {
-	// 	level.status = Uninitialized
-	// }
 }
 
-func handleCpuMove(level *Level, window *Window) {
+func (level *Level) handleCpuMove(window *Window) {
 	if !level.stonesAreStill || level.status == Finished {
 		return
 	}
@@ -538,7 +636,142 @@ func handleCpuMove(level *Level, window *Window) {
 
 	level.selectedStone = actor
 	level.action = StoneHit
-	setAimVectorStart(rl.Vector2Add(actor.pos, rl.Vector2Negate(rl.Vector2Subtract(target.pos, actor.pos))), level)
+	clampedV := rl.Vector2Subtract(target.pos, actor.pos)
+	clampedV = rl.Vector2ClampValue(clampedV, 0.0, MaxPullLengthAllowed)
+	clampedV = rl.Vector2Negate(clampedV)
+	clampedV = rl.Vector2Add(actor.pos, clampedV)
+
+	screenBoundary := window.GetScreenBoundary()
+	boundaryLines := window.GetScreenBoundaryLines()
+
+	if !rl.CheckCollisionPointRec(clampedV, screenBoundary) {
+		for _, line := range boundaryLines {
+			point, ok := getLineToLineIntersectionPoint(line[0], line[1], clampedV, actor.pos)
+			if ok {
+				clampedV = point
+				break
+			}
+		}
+	}
+
+	level.setAimVectorStart(clampedV)
+}
+
+func (level *Level) drawField(window *Window) {
+	screenWidth, screenHeight := window.GetScreenDimensions()
+
+	rl.ClearBackground(level.levelSettings.backgroundColor)
+
+	if level.levelSettings.isBordered {
+		rl.DrawRectangleLinesEx(
+			level.levelSettings.boundary,
+			screenWidth/255,
+			dimWhite(125),
+		)
+	}
+
+	drawScore(screenWidth, screenHeight, level)
+
+	// draw the vertical centre line
+	rl.DrawLineEx(
+		rl.NewVector2(screenWidth/2, 0),
+		rl.NewVector2(screenWidth/2, screenHeight),
+		screenWidth/256,
+		dimWhite(125),
+	)
+
+	if level.levelSettings.isTimed {
+		timeLeft := level.levelSettings.totalSecondsAllowed - uint8(level.totalTimeRunning)
+		totalTimeTxt := fmt.Sprintf("%02d", timeLeft)
+
+		// this is used for the width of the timer
+		// so that it is not variable based on the time value itself.
+		// since the default Raylib font isn't monospaced, it will shrink in width when it is 19 vs when it is 22
+		totalTimeTxtMeasured := rl.MeasureTextEx(rl.GetFontDefault(), "00", FontSize/3, FontSize/30)
+
+		measuredSize := rl.NewVector2(
+			totalTimeTxtMeasured.X*1.2,
+			totalTimeTxtMeasured.Y*1.2,
+		)
+
+		offsetX := (screenWidth - measuredSize.X) / 2
+		offsetY := (screenHeight - measuredSize.Y) / 2
+
+		rl.DrawRectangleV(
+			rl.NewVector2(offsetX, offsetY),
+			measuredSize,
+			BG_COLOR,
+		)
+
+		rl.DrawRectangleLinesEx(
+			rl.NewRectangle(offsetX, offsetY, measuredSize.X, measuredSize.Y),
+			10,
+			dimWhite(125),
+		)
+
+		totalTimeTxtMeasured = rl.MeasureTextEx(rl.GetFontDefault(), totalTimeTxt, FontSize/3, FontSize/30)
+
+		offsetX = (screenWidth - totalTimeTxtMeasured.X) / 2
+		offsetY = (screenHeight - totalTimeTxtMeasured.Y) / 2
+
+		rl.DrawTextEx(
+			rl.GetFontDefault(),
+			totalTimeTxt,
+			rl.NewVector2(offsetX, offsetY),
+			FontSize/3,
+			FontSize/30,
+			dimWhite(125),
+		)
+	}
+}
+
+func (level *Level) draw(window *Window) {
+	{
+		level.drawField(window)
+
+		// draw the aim bubbles
+		if level.action == StoneAimed {
+			for i := float32(0.0); i <= 1.0; i += 0.1 {
+				amount := i + level.totalTimeRunning/10
+				amount = amount - float32(int(amount))
+				point := rl.Vector2Lerp(level.selectedStone.pos, level.aimVectorForwardExtensionEnd, amount)
+				rl.DrawCircleV(point, StoneRadius*0.4*(1-amount), dimWhite(50))
+			}
+		}
+
+		// draw the stones
+		for i := range level.stones {
+			stone := &(level.stones[i])
+			drawStone(stone, level)
+		}
+
+		// draw the aim line
+		if level.action == StoneAimed {
+			rl.DrawCircleV(level.selectedStone.pos, StoneRadius*0.1, dimWhite(60))
+			rl.DrawLineEx(
+				level.aimVectorStart,
+				level.selectedStone.pos,
+				3.0,
+				dimWhite(60),
+			)
+		}
+	}
+
+	{
+		// draw particles
+		for _, p := range level.allParticles {
+			rl.BeginBlendMode(rl.BlendAdditive)
+			p.render()
+			rl.EndBlendMode()
+		}
+	}
+
+	{
+		// draw shards
+		for _, p := range level.allShards {
+			p.render()
+		}
+	}
 }
 
 func drawStone(s *Stone, level *Level) {
@@ -614,8 +847,8 @@ func drawScore(screenWidth, screenHeight float32, level *Level) {
 
 	defaultFont := rl.GetFontDefault()
 
-	p1Score := fmt.Sprintf("0%d", level.score[PlayerOne])
-	p2Score := fmt.Sprintf("0%d", level.score[PlayerTwo])
+	p1Score := fmt.Sprintf("%02d", level.score[PlayerOne])
+	p2Score := fmt.Sprintf("%02d", level.score[PlayerTwo])
 
 	measuredSize := rl.MeasureTextEx(defaultFont, "00", FontSize, FontSize/10)
 
@@ -633,93 +866,4 @@ func drawScore(screenWidth, screenHeight float32, level *Level) {
 
 	rl.DrawTextEx(defaultFont, labelP1, rl.NewVector2(p1OffsetX, labelsOffsetY), FontSize/3, FontSize/30, color)
 	rl.DrawTextEx(defaultFont, labelP2, rl.NewVector2(p2OffsetX, labelsOffsetY), FontSize/3, FontSize/30, color)
-}
-
-func draw(level *Level, window *Window) {
-	screenWidth, screenHeight := window.GetScreenDimensions()
-
-	if level.status == Finished {
-		whoWon := level.playerSettings[PlayerOne].label
-		if level.score[PlayerOne] == 0 {
-			whoWon = level.playerSettings[PlayerTwo].label
-		}
-		whoWon = fmt.Sprintf("%s won!", whoWon)
-		measuredSize := rl.MeasureTextEx(rl.GetFontDefault(), whoWon, 200, 10)
-		w := (screenWidth - measuredSize.X) / 2
-		h := (screenHeight - measuredSize.Y) / 2
-
-		rl.DrawTextEx(
-			rl.GetFontDefault(),
-			whoWon,
-			rl.NewVector2(w, h),
-			200,
-			10,
-			dimWhite(60),
-		)
-
-		message2 := rl.MeasureTextEx(rl.GetFontDefault(), "press space to restart", 50, 10)
-		w = (screenWidth - message2.X) / 2
-		h = h + measuredSize.Y*1.5
-		rl.DrawTextEx(
-			rl.GetFontDefault(),
-			"press space to restart",
-			rl.NewVector2(w, h),
-			50,
-			10,
-			dimWhite(60),
-		)
-	} else {
-		drawScore(screenWidth, screenHeight, level)
-
-		// draw the vertical centre line
-		rl.DrawLineEx(
-			rl.NewVector2(screenWidth/2, 0),
-			rl.NewVector2(screenWidth/2, screenHeight),
-			screenWidth/256,
-			dimWhite(125),
-		)
-
-		// draw the aim bubbles
-		if level.action == StoneAimed {
-			for i := float32(0.0); i <= 1.0; i += 0.1 {
-				amount := i + level.totalTimeRunning/10
-				amount = amount - float32(int(amount))
-				point := rl.Vector2Lerp(level.selectedStone.pos, level.aimVectorForwardExtensionEnd, amount)
-				rl.DrawCircleV(point, StoneRadius*0.4*(1-amount), dimWhite(50))
-			}
-		}
-
-		// draw the stones
-		for i := range level.stones {
-			stone := &(level.stones[i])
-			drawStone(stone, level)
-		}
-
-		// draw the aim line
-		if level.action == StoneAimed {
-			rl.DrawCircleV(level.selectedStone.pos, StoneRadius*0.1, dimWhite(60))
-			rl.DrawLineEx(
-				level.aimVectorStart,
-				level.selectedStone.pos,
-				3.0,
-				dimWhite(60),
-			)
-		}
-	}
-
-	{
-		// draw particles
-		for _, p := range level.allParticles {
-			rl.BeginBlendMode(rl.BlendAdditive)
-			p.render()
-			rl.EndBlendMode()
-		}
-	}
-
-	{
-		// draw shards
-		for _, p := range level.allShards {
-			p.render()
-		}
-	}
 }

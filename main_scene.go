@@ -51,7 +51,7 @@ func (scene *SceneMain) Init(data any, window *Window) {
 		text:        "play",
 		rectangle:   rl.NewRectangle(w, h, playText.X, playText.Y),
 		fontSize:    FontSize / 5,
-		targetScene: Levels,
+		targetScene: InitialLevel,
 	})
 
 	controls := rl.MeasureTextEx(defaultFont, "controls", FontSize/5, 10)
@@ -98,6 +98,8 @@ func (scene *SceneMain) Update(window *Window) (SceneId, any) {
 }
 
 func (scene *SceneMain) Draw(window *Window) {
+	// draw background
+	rl.ClearBackground(BG_COLOR)
 	rl.DrawTextEx(
 		rl.GetFontDefault(),
 		scene.logoText,

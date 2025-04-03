@@ -1,8 +1,6 @@
 package main
 
 import (
-	"image/color"
-
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -21,34 +19,13 @@ var FontSize float32
 var MaxParticleSpeed float32
 var MaxShardRadius float32
 
-func dimWhite(alpha uint8) color.RGBA {
-	return rl.NewColor(255, 255, 255, alpha)
-}
-
-type SceneId uint8
 type GameStatus uint8
 
 const (
-	// scenes
-	Main     SceneId = iota
-	Settings SceneId = iota
-	Levels   SceneId = iota
-	Controls SceneId = iota
-	GameOver SceneId = iota
-	Quit     SceneId = iota
 	// game status
 	GameUninitialized GameStatus = iota
 	GameInitialized   GameStatus = iota
 )
-
-type Scene interface {
-	GetId() SceneId
-	Init(data any, window *Window)
-	HandleUserInput(window *Window)
-	Update(window *Window) (SceneId, any)
-	Draw(window *Window)
-	Teardown(window *Window)
-}
 
 type GameSettings struct{}
 
@@ -85,11 +62,17 @@ func (g *Game) Init(window *Window) {
 	mainScene := NewSceneMain()
 	g.scenes[Main] = &mainScene
 
-	gameLevelScene := NewSceneLevelsBasic()
-	g.scenes[Levels] = &gameLevelScene
+	levelBasic := NewSceneLevelsBasic()
+	g.scenes[LevelBasic] = &levelBasic
 
-	gameOverScene := NewSceneGameOver()
-	g.scenes[GameOver] = &gameOverScene
+	levelBordered := NewSceneLevelsBordered(window)
+	g.scenes[LevelBordered] = &levelBordered
+
+	levelTimed := NewSceneLevelsTimeLimit(window)
+	g.scenes[LevelTimeLimit] = &levelTimed
+
+	gameOverScene := NewSceneTransition()
+	g.scenes[Transition] = &gameOverScene
 
 	controlsScene := NewSceneControls()
 	g.scenes[Controls] = &controlsScene
@@ -112,6 +95,10 @@ func (g *Game) Update(window *Window) uint8 {
 	}
 
 	if g.currentScene != nextSceneId {
+		// fmt.Printf("Scene change [%d => %d]\n", g.currentScene, nextSceneId)
+		// TODO: it is possible that if we go to the Game Over screen twice
+		// TODO: it will just append to the existing struct instance instead of creating a totally new screen
+		// TODO: this can be bad because it can result in weird errors.
 		g.scenes[nextSceneId].Init(data, window)
 		g.currentScene = nextSceneId
 	}
@@ -121,18 +108,23 @@ func (g *Game) Update(window *Window) uint8 {
 
 func (g *Game) Draw(window *Window) {
 	scene := g.scenes[g.currentScene]
-
-	// draw background
-	rl.ClearBackground(BG_COLOR)
 	scene.Draw(window)
+}
+
+func (g *Game) Teardown(window *Window) {
+	g.scenes[Main].Teardown(window)
+	g.scenes[LevelBasic].Teardown(window)
+	g.scenes[LevelBordered].Teardown(window)
+	g.scenes[Controls].Teardown(window)
+	g.scenes[Transition].Teardown(window)
 }
 
 func main() {
 	game := NewGame()
 	window := Window{
-		fullscreen: true,
-		width:      1280,
-		height:     720,
+		fullscreen: !true,
+		width:      1920,
+		height:     1080,
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
@@ -164,10 +156,5 @@ func main() {
 		rl.EndDrawing()
 	}
 
-	game.scenes[Main].Teardown(&window)
-	// game.scenes[Settings].Teardown(&window)
-	game.scenes[Levels].Teardown(&window)
-	game.scenes[Controls].Teardown(&window)
-	game.scenes[GameOver].Teardown(&window)
-	// game.scenes[Quit].Teardown(&window)
+	game.Teardown(&window)
 }
