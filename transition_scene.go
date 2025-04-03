@@ -81,7 +81,7 @@ func (scene *SceneTransition) Init(data any, window *Window) {
 			targetScene: scene.data.levelSettings.sceneId,
 		})
 
-		mainMenu := rl.MeasureTextEx(rl.GetFontDefault(), "main menu", FontSize/7, 10)
+		mainMenu := rl.MeasureTextEx(rl.GetFontDefault(), "main menu", FontSize/7, 10) // TODO: should spacing be static????
 
 		w = offsetX + (screenWidth/2-mainMenu.X)/2
 		h = h + mainMenu.Y*1.2
@@ -126,6 +126,8 @@ func (scene *SceneTransition) Update(window *Window) (SceneId, any) {
 func (scene *SceneTransition) Draw(window *Window) {
 	// draw background
 	rl.ClearBackground(BG_COLOR)
+	// this prevents timebox from being rendered
+	scene.data.levelSettings.isTimed = false
 	scene.data.drawField(window) // TODO: might be excessive?
 
 	screenWidth, screenHeight := window.GetScreenDimensions()

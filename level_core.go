@@ -61,11 +61,13 @@ type PlayerSettings struct {
 }
 
 type LevelSettings struct {
-	sceneId         SceneId
-	stonesPerPlayer uint8
-	isBordered      bool
-	boundary        rl.Rectangle
-	backgroundColor rl.Color
+	sceneId             SceneId
+	stonesPerPlayer     uint8
+	isBordered          bool
+	isTimed             bool
+	totalSecondsAllowed uint8
+	boundary            rl.Rectangle
+	backgroundColor     rl.Color
 }
 
 type Level struct {
@@ -522,6 +524,9 @@ func (level *Level) update(window *Window) {
 		scorePlayerOne := 0
 		scorePlayerTwo := 0
 
+		totalStoneLifePointsPlayerOne := float32(0.0)
+		totalStoneLifePointsPlayerTwo := float32(0.0)
+
 		for _, stone := range level.stones {
 			if stone.isDead {
 				continue
@@ -529,17 +534,39 @@ func (level *Level) update(window *Window) {
 
 			if stone.playerId == PlayerOne {
 				scorePlayerOne += 1
+				totalStoneLifePointsPlayerOne += stone.life
 			}
 
 			if stone.playerId == PlayerTwo {
 				scorePlayerTwo += 1
+				totalStoneLifePointsPlayerTwo += stone.life
 			}
 		}
 
 		level.score[PlayerOne] = uint8(scorePlayerOne)
 		level.score[PlayerTwo] = uint8(scorePlayerTwo)
 
-		if scorePlayerOne*scorePlayerTwo == 0 {
+		if level.levelSettings.isTimed {
+			timeLeft := level.levelSettings.totalSecondsAllowed - uint8(level.totalTimeRunning)
+			if timeLeft == 0 {
+				if level.score[PlayerOne] > level.score[PlayerTwo] {
+					level.score[PlayerTwo] = 0
+				} else if level.score[PlayerOne] < level.score[PlayerTwo] {
+					level.score[PlayerOne] = 0
+				} else {
+					// TODO: these can be elaborate than this simple heuristic, but for now it's good enough
+					if totalStoneLifePointsPlayerOne > totalStoneLifePointsPlayerTwo {
+						level.score[PlayerTwo] = 0
+					} else if totalStoneLifePointsPlayerOne < totalStoneLifePointsPlayerTwo {
+						level.score[PlayerOne] = 0
+					} else {
+						level.score[level.playerTurn] = 0 // if everything is equal when the time runs out...the one whose turn it is loses.
+					}
+				}
+			}
+		}
+
+		if level.score[PlayerOne]*level.score[PlayerTwo] == 0 {
 			level.status = Finished
 			level.playerTurn = PlayerOne
 		}
@@ -652,10 +679,53 @@ func (level *Level) drawField(window *Window) {
 		screenWidth/256,
 		dimWhite(125),
 	)
+
+	if level.levelSettings.isTimed {
+		timeLeft := level.levelSettings.totalSecondsAllowed - uint8(level.totalTimeRunning)
+		totalTimeTxt := fmt.Sprintf("%02d", timeLeft)
+
+		// this is used for the width of the timer
+		// so that it is not variable based on the time value itself.
+		// since the default Raylib font isn't monospaced, it will shrink in width when it is 19 vs when it is 22
+		totalTimeTxtMeasured := rl.MeasureTextEx(rl.GetFontDefault(), "00", FontSize/3, FontSize/30)
+
+		measuredSize := rl.NewVector2(
+			totalTimeTxtMeasured.X*1.2,
+			totalTimeTxtMeasured.Y*1.2,
+		)
+
+		offsetX := (screenWidth - measuredSize.X) / 2
+		offsetY := (screenHeight - measuredSize.Y) / 2
+
+		rl.DrawRectangleV(
+			rl.NewVector2(offsetX, offsetY),
+			measuredSize,
+			BG_COLOR,
+		)
+
+		rl.DrawRectangleLinesEx(
+			rl.NewRectangle(offsetX, offsetY, measuredSize.X, measuredSize.Y),
+			10,
+			dimWhite(125),
+		)
+
+		totalTimeTxtMeasured = rl.MeasureTextEx(rl.GetFontDefault(), totalTimeTxt, FontSize/3, FontSize/30)
+
+		offsetX = (screenWidth - totalTimeTxtMeasured.X) / 2
+		offsetY = (screenHeight - totalTimeTxtMeasured.Y) / 2
+
+		rl.DrawTextEx(
+			rl.GetFontDefault(),
+			totalTimeTxt,
+			rl.NewVector2(offsetX, offsetY),
+			FontSize/3,
+			FontSize/30,
+			dimWhite(125),
+		)
+	}
 }
 
 func (level *Level) draw(window *Window) {
-
 	{
 		level.drawField(window)
 

@@ -68,6 +68,9 @@ func (g *Game) Init(window *Window) {
 	levelBordered := NewSceneLevelsBordered(window)
 	g.scenes[LevelBordered] = &levelBordered
 
+	levelTimed := NewSceneLevelsTimeLimit(window)
+	g.scenes[LevelTimeLimit] = &levelTimed
+
 	gameOverScene := NewSceneTransition()
 	g.scenes[Transition] = &gameOverScene
 
