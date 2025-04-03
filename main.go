@@ -94,6 +94,22 @@ func (g *Game) Update(window *Window) uint8 {
 		return 1
 	}
 
+	if rl.IsKeyDown(rl.KeyZero) {
+		nextSceneId = Main
+	}
+
+	if rl.IsKeyDown(rl.KeyOne) {
+		nextSceneId = LevelBasic
+	}
+
+	if rl.IsKeyDown(rl.KeyTwo) {
+		nextSceneId = LevelBordered
+	}
+
+	if rl.IsKeyDown(rl.KeyThree) {
+		nextSceneId = LevelTimeLimit
+	}
+
 	if g.currentScene != nextSceneId {
 		// fmt.Printf("Scene change [%d => %d]\n", g.currentScene, nextSceneId)
 		// TODO: it is possible that if we go to the Game Over screen twice
