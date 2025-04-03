@@ -1,7 +1,5 @@
 package main
 
-import rl "github.com/gen2brain/raylib-go/raylib"
-
 type SceneLevelsBordered struct {
 	level         Level
 	levelSettings LevelSettings
@@ -12,7 +10,7 @@ func NewSceneLevelsBordered(window *Window) SceneLevelsBordered {
 		levelSettings: LevelSettings{
 			sceneId:         LevelBordered,
 			stonesPerPlayer: 4,
-			backgroundColor: rl.NewColor(230, 10, 10, 255),
+			backgroundColor: BG_COLOR,
 			isBordered:      true,
 			boundary:        window.GetScreenBoundary(),
 		},

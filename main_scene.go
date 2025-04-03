@@ -51,7 +51,7 @@ func (scene *SceneMain) Init(data any, window *Window) {
 		text:        "play",
 		rectangle:   rl.NewRectangle(w, h, playText.X, playText.Y),
 		fontSize:    FontSize / 5,
-		targetScene: LevelBasic,
+		targetScene: InitialLevel,
 	})
 
 	controls := rl.MeasureTextEx(defaultFont, "controls", FontSize/5, 10)
