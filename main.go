@@ -19,6 +19,9 @@ var FontSize float32
 var MaxParticleSpeed float32
 var MaxShardRadius float32
 
+// default values
+var IsFullscreen bool = false
+
 type GameStatus uint8
 
 const (
@@ -38,10 +41,9 @@ type Game struct {
 
 func NewGame() Game {
 	return Game{
-		status:       GameUninitialized,
-		scenes:       map[SceneId]Scene{},
-		settings:     GameSettings{},
-		currentScene: Main,
+		status:   GameUninitialized,
+		scenes:   map[SceneId]Scene{},
+		settings: GameSettings{},
 	}
 }
 
@@ -138,7 +140,7 @@ func (g *Game) Teardown(window *Window) {
 func main() {
 	game := NewGame()
 	window := Window{
-		fullscreen: true,
+		fullscreen: IsFullscreen,
 		width:      1920,
 		height:     1080,
 	}

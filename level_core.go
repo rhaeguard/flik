@@ -58,6 +58,7 @@ type PlayerSettings struct {
 	outerRingColor rl.Color
 	lifeColor      rl.Color
 	rocketColor    rl.Color
+	isCpu          bool
 }
 
 type LevelSettings struct {
@@ -90,7 +91,7 @@ type Level struct {
 	levelSettings                  LevelSettings
 }
 
-func newLevel(levelSettings LevelSettings) Level {
+func newLevel(levelSettings LevelSettings, playerSettings map[Player]PlayerSettings) Level {
 	playerTurn := PlayerOne
 	if rand.Float32() > 0.5 {
 		playerTurn = PlayerTwo
@@ -112,24 +113,9 @@ func newLevel(levelSettings LevelSettings) Level {
 			PlayerOne: 6,
 			PlayerTwo: 6,
 		},
-		playerTurn: playerTurn,
-		playerSettings: map[Player]PlayerSettings{
-			PlayerOne: {
-				label:          "you",
-				primaryColor:   rl.NewColor(55, 113, 142, 255),
-				outerRingColor: rl.NewColor(37, 78, 112, 255),
-				lifeColor:      rl.NewColor(255, 250, 255, 255),
-				rocketColor:    rl.SkyBlue,
-			},
-			PlayerTwo: {
-				label:          "cpu",
-				primaryColor:   rl.NewColor(133, 90, 92, 255),
-				outerRingColor: rl.NewColor(102, 16, 31, 255),
-				lifeColor:      rl.NewColor(255, 250, 255, 255),
-				rocketColor:    rl.NewColor(129, 13, 32, 255),
-			},
-		},
-		levelSettings: levelSettings,
+		playerTurn:     playerTurn,
+		playerSettings: playerSettings,
+		levelSettings:  levelSettings,
 	}
 }
 
@@ -263,11 +249,67 @@ type collisionPair struct {
 	magnitude      float32
 }
 
+func (level *Level) resolveWallCollision(a *Stone) {
+	boundary := level.levelSettings.boundary
+
+	wallCollision := false
+
+	var collisionPoint rl.Vector2
+
+	if a.pos.X-a.radius < boundary.X {
+		pd := math.Abs(float64(a.pos.X) - float64(a.radius))
+		a.pos.X += float32(pd)
+		a.velocity.X *= -1
+		wallCollision = true
+		collisionPoint = rl.NewVector2(0, a.pos.Y)
+	} else if a.pos.X+a.radius > boundary.X+boundary.Width {
+		pd := math.Abs(float64(a.pos.X+a.radius) - float64(boundary.X+boundary.Width))
+		a.pos.X -= float32(pd)
+		a.velocity.X *= -1
+		wallCollision = true
+		collisionPoint = rl.NewVector2(boundary.X+boundary.Width, a.pos.Y)
+	}
+
+	if a.pos.Y-a.radius < boundary.Y {
+		pd := math.Abs(float64(a.pos.Y) - float64(a.radius))
+		a.pos.Y += float32(pd)
+		a.velocity.Y *= -1
+		wallCollision = true
+		collisionPoint = rl.NewVector2(a.pos.X, 0)
+	} else if a.pos.Y+a.radius > boundary.Y+boundary.Height {
+		pd := math.Abs(float64(a.pos.Y+a.radius) - float64(boundary.Y+boundary.Height))
+		a.pos.Y -= float32(pd)
+		a.velocity.Y *= -1
+		wallCollision = true
+		collisionPoint = rl.NewVector2(a.pos.X, boundary.Y+boundary.Height)
+	}
+
+	if wallCollision {
+		speedDiff := rl.Vector2Length(a.velocity)
+		amount := rl.Clamp(speedDiff, 0, MaxPushVelocityAllowed) * 2
+		a.life -= amount * 0.3 // TODO: maybe it should also depend on the angle the stone is hitting the wall
+
+		collisionMagnitude := 2 * speedDiff / MaxPushVelocityAllowed
+		for i := float32(0.0); i < 100; i += 0.5 {
+			shardColor := level.playerSettings[a.playerId].primaryColor
+			part := NewShard(
+				collisionPoint,
+				3.6*i,
+				MaxParticleSpeed*rand.Float32(),
+				collisionMagnitude,
+				MaxShardRadius*(rand.Float32()+0.5),
+				shardColor,
+				true,
+			)
+
+			level.allShards = append(level.allShards, part)
+		}
+	}
+}
+
 func (level *Level) update(window *Window) {
 
 	if level.levelSettings.isBordered {
-		boundary := level.levelSettings.boundary
-
 		allStonesCount := len(level.stones)
 		for i := range allStonesCount {
 			a := &level.stones[i]
@@ -275,41 +317,7 @@ func (level *Level) update(window *Window) {
 				continue
 			}
 
-			wallCollision := false
-
-			if a.pos.X-a.radius < 0 {
-				pd := math.Abs(float64(a.pos.X) - float64(a.radius))
-				a.pos.X += float32(pd)
-				a.velocity.X *= -1
-				wallCollision = true
-
-			} else if a.pos.X+a.radius > boundary.Width {
-				pd := math.Abs(float64(a.pos.X+a.radius) - float64(boundary.Width))
-				a.pos.X -= float32(pd)
-				a.velocity.X *= -1
-				wallCollision = true
-
-			}
-
-			if a.pos.Y-a.radius < 0 {
-				pd := math.Abs(float64(a.pos.Y) - float64(a.radius))
-				a.pos.Y += float32(pd)
-				a.velocity.Y *= -1
-				wallCollision = true
-
-			} else if a.pos.Y+a.radius > boundary.Height {
-				pd := math.Abs(float64(a.pos.Y+a.radius) - float64(boundary.Height))
-				a.pos.Y -= float32(pd)
-				a.velocity.Y *= -1
-				wallCollision = true
-
-			}
-
-			if wallCollision {
-				speedDiff := rl.Vector2Length(a.velocity)
-				amount := rl.Clamp(speedDiff, 0, MaxPushVelocityAllowed) * 2
-				a.life -= amount * 0.3 // TODO: maybe it should also depend on the angle the stone is hitting the wall
-			}
+			level.resolveWallCollision(a)
 		}
 	}
 
@@ -320,6 +328,7 @@ func (level *Level) update(window *Window) {
 		if a.isDead {
 			continue
 		}
+
 		for j := i + 1; j < allStonesCount; j++ {
 			b := &level.stones[j]
 
@@ -594,10 +603,10 @@ func (level *Level) handleUserInput(window *Window) {
 	}
 
 	if level.status != Stopped {
-		if level.playerTurn == PlayerOne {
-			level.handleMouseMove()
-		} else {
+		if level.playerSettings[level.playerTurn].isCpu {
 			level.handleCpuMove(window)
+		} else {
+			level.handleMouseMove()
 		}
 	}
 }
@@ -793,7 +802,7 @@ func drawStone(s *Stone, level *Level) {
 		playerSettings.outerRingColor,
 	)
 
-	if level.stonesAreStill && s.playerId == level.playerTurn && level.playerTurn == PlayerOne {
+	if level.stonesAreStill && s.playerId == level.playerTurn && !level.playerSettings[level.playerTurn].isCpu {
 		// the "active player" ring
 		rl.DrawRing(
 			s.pos,
