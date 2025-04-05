@@ -289,6 +289,8 @@ func (level *Level) resolveWallCollision(a *Stone) {
 		amount := rl.Clamp(speedDiff, 0, MaxPushVelocityAllowed) * 2
 		a.life -= amount * 0.3 // TODO: maybe it should also depend on the angle the stone is hitting the wall
 
+		level.hitStoneMoving = nil
+
 		collisionMagnitude := 2 * speedDiff / MaxPushVelocityAllowed
 		for i := float32(0.0); i < 100; i += 0.5 {
 			shardColor := level.playerSettings[a.playerId].primaryColor
@@ -477,16 +479,15 @@ func (level *Level) update(window *Window) {
 
 			for range 25 {
 				angle := generalAngle + float32((rand.Intn(20) - 10))
-				part := NewParticle(
+
+				level.allParticles = append(level.allParticles, NewParticle(
 					stone.pos,
 					angle,
 					MaxParticleSpeed*rand.Float32(),
 					life,
 					stone.radius*1.02,
 					rocketColor,
-				)
-
-				level.allParticles = append(level.allParticles, part)
+				))
 			}
 
 			if rl.Vector2Length(stone.velocity) == 0 {
