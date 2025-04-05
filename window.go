@@ -28,6 +28,8 @@ func (c *Window) GetScreenBoundary() rl.Rectangle {
 	return screenRect
 }
 
+// GetScreenBoundaryLines - returns the boundary lines in the order of
+// TOP, LEFT, BOTTOM, RIGHT
 func (c *Window) GetScreenBoundaryLines() [4][2]rl.Vector2 {
 	screenBoundary := c.GetScreenBoundary()
 	topLeft := rl.NewVector2(screenBoundary.X, screenBoundary.Y)

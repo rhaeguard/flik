@@ -1,8 +1,11 @@
 package main
 
+import rl "github.com/gen2brain/raylib-go/raylib"
+
 type SceneLevelsBordered struct {
-	level         Level
-	levelSettings LevelSettings
+	level          Level
+	levelSettings  LevelSettings
+	playerSettings map[Player]PlayerSettings
 }
 
 func NewSceneLevelsBordered(window *Window) SceneLevelsBordered {
@@ -14,12 +17,30 @@ func NewSceneLevelsBordered(window *Window) SceneLevelsBordered {
 			isBordered:      true,
 			boundary:        window.GetScreenBoundary(),
 		},
+		playerSettings: map[Player]PlayerSettings{
+			PlayerOne: {
+				label:          "you",
+				primaryColor:   rl.NewColor(55, 113, 142, 255),
+				outerRingColor: rl.NewColor(37, 78, 112, 255),
+				lifeColor:      rl.NewColor(255, 250, 255, 255),
+				rocketColor:    rl.SkyBlue,
+				isCpu:          false,
+			},
+			PlayerTwo: {
+				label:          "cpu",
+				primaryColor:   rl.NewColor(133, 90, 92, 255),
+				outerRingColor: rl.NewColor(102, 16, 31, 255),
+				lifeColor:      rl.NewColor(255, 250, 255, 255),
+				rocketColor:    rl.NewColor(129, 13, 32, 255),
+				isCpu:          true,
+			},
+		},
 	}
 }
 
 func (scene *SceneLevelsBordered) Init(data any, window *Window) {
 	// init
-	level := newLevel(scene.levelSettings)
+	level := newLevel(scene.levelSettings, scene.playerSettings)
 	level.init(window)
 	scene.level = level
 }

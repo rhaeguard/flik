@@ -38,10 +38,9 @@ type Game struct {
 
 func NewGame() Game {
 	return Game{
-		status:       GameUninitialized,
-		scenes:       map[SceneId]Scene{},
-		settings:     GameSettings{},
-		currentScene: Main,
+		status:   GameUninitialized,
+		scenes:   map[SceneId]Scene{},
+		settings: GameSettings{},
 	}
 }
 
@@ -138,7 +137,7 @@ func (g *Game) Teardown(window *Window) {
 func main() {
 	game := NewGame()
 	window := Window{
-		fullscreen: true,
+		fullscreen: !true,
 		width:      1920,
 		height:     1080,
 	}
