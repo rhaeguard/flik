@@ -19,6 +19,9 @@ var FontSize float32
 var MaxParticleSpeed float32
 var MaxShardRadius float32
 
+// default values
+var IsFullscreen bool = false
+
 type GameStatus uint8
 
 const (
@@ -137,7 +140,7 @@ func (g *Game) Teardown(window *Window) {
 func main() {
 	game := NewGame()
 	window := Window{
-		fullscreen: !true,
+		fullscreen: IsFullscreen,
 		width:      1920,
 		height:     1080,
 	}

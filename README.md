@@ -29,7 +29,7 @@ go run .
 
 ```sh
 # from the root of the project
-go build -o bin\ -ldflags "-H=windowsgui" .
+go build -o bin\ -ldflags "-H=windowsgui -s -w" -tags release .
 # an exe should be generated in the bin directory 
 ```
 
