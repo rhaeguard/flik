@@ -24,8 +24,9 @@ const (
 	StoneHit   ActionEnum = iota
 )
 const (
-	PlayerOne Player = iota
-	PlayerTwo Player = iota
+	PlayerOne        Player = iota
+	PlayerTwo        Player = iota
+	TotalPlayerCount Player = iota
 )
 
 // level is a scene
@@ -63,6 +64,13 @@ type PlayerSettings struct {
 	label          string
 }
 
+type PlayerColorPalette struct {
+	primaryColor   rl.Color
+	outerRingColor rl.Color
+	lifeColor      rl.Color
+	rocketColor    rl.Color
+}
+
 type LevelSettings struct {
 	isBordered          bool
 	isTimed             bool
@@ -86,15 +94,15 @@ type Level struct {
 	levelSettings                  LevelSettings
 	selectedStone                  *Stone
 	hitStoneMoving                 *Stone
-	score                          map[Player]uint8
-	playerSettings                 map[Player]PlayerSettings
+	score                          [TotalPlayerCount]uint8
+	playerSettings                 [TotalPlayerCount]PlayerSettings
 	// collection of items
 	stones       []Stone
 	allParticles []Particle
 	allShards    []Shard
 }
 
-func newLevel(levelSettings LevelSettings, playerSettings map[Player]PlayerSettings) Level {
+func newLevel(levelSettings LevelSettings, playerSettings [TotalPlayerCount]PlayerSettings) Level {
 	playerTurn := PlayerOne
 	if rand.Float32() > 0.5 {
 		playerTurn = PlayerTwo
@@ -112,9 +120,9 @@ func newLevel(levelSettings LevelSettings, playerSettings map[Player]PlayerSetti
 		allParticles:                   []Particle{},
 		allShards:                      []Shard{},
 		stonesAreStill:                 true,
-		score: map[Player]uint8{
-			PlayerOne: 6,
-			PlayerTwo: 6,
+		score: [TotalPlayerCount]uint8{
+			PlayerOne: levelSettings.stonesPerPlayer,
+			PlayerTwo: levelSettings.stonesPerPlayer,
 		},
 		playerTurn:     playerTurn,
 		playerSettings: playerSettings,

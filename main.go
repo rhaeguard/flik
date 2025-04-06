@@ -111,9 +111,6 @@ func (g *Game) Update(window *Window) uint8 {
 
 	if g.currentScene != nextSceneId {
 		// fmt.Printf("Scene change [%d => %d]\n", g.currentScene, nextSceneId)
-		// TODO: it is possible that if we go to the Game Over screen twice
-		// TODO: it will just append to the existing struct instance instead of creating a totally new screen
-		// TODO: this can be bad because it can result in weird errors.
 		g.scenes[nextSceneId].Init(data, window)
 		g.currentScene = nextSceneId
 	}

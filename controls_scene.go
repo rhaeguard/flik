@@ -41,23 +41,23 @@ func (scene *SceneControls) Init(data any, window *Window) {
 		interactable: false,
 	})
 
-	instructionTextMeasured := rl.MeasureTextEx(rl.GetFontDefault(), "right-click to pick a circle", FontSize/10, 10)
+	instructionTextMeasured := rl.MeasureTextEx(rl.GetFontDefault(), "left-click on a circle and drag to attack", FontSize/10, 10)
 	w = (screenWidth - instructionTextMeasured.X) / 2
 	h = h + measuredSize.Y*1.2
 
 	scene.sceneElements = append(scene.sceneElements, sceneElement{
-		text:         "right-click to pick a circle",
+		text:         "left-click on a circle and drag to attack",
 		fontSize:     FontSize / 10,
 		rectangle:    rl.NewRectangle(w, h, instructionTextMeasured.X, instructionTextMeasured.Y),
 		interactable: false,
 	})
 
-	instruction2TextMeasured := rl.MeasureTextEx(rl.GetFontDefault(), "left-click to attack", FontSize/10, 10)
+	instruction2TextMeasured := rl.MeasureTextEx(rl.GetFontDefault(), "move cursor back to center to reset", FontSize/10, 10)
 	w = (screenWidth - instruction2TextMeasured.X) / 2
 	h = h + instructionTextMeasured.Y*1.2
 
 	scene.sceneElements = append(scene.sceneElements, sceneElement{
-		text:         "left-click to attack",
+		text:         "move cursor back to center to reset",
 		fontSize:     FontSize / 10,
 		rectangle:    rl.NewRectangle(w, h, instruction2TextMeasured.X, instruction2TextMeasured.Y),
 		interactable: false,
