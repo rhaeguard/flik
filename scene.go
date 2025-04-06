@@ -4,13 +4,14 @@ type SceneId uint8
 
 const (
 	// scenes
-	Main           SceneId = iota
-	LevelBasic     SceneId = iota
-	LevelBordered  SceneId = iota
-	LevelTimeLimit SceneId = iota
-	Controls       SceneId = iota
-	Transition     SceneId = iota
-	Quit           SceneId = iota
+	Main            SceneId = iota
+	LevelBasic      SceneId = iota
+	LevelBordered   SceneId = iota
+	LevelTimeLimit  SceneId = iota
+	Controls        SceneId = iota
+	Transition      SceneId = iota
+	Quit            SceneId = iota
+	TotalSceneCount SceneId = iota
 )
 
 type Scene interface {

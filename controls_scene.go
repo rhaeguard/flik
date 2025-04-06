@@ -14,10 +14,8 @@ type sceneElement struct {
 }
 
 type SceneControls struct {
-	nextSceneId     SceneId
-	texture         rl.Texture2D
-	colorSwapShader rl.Shader
-	sceneElements   []sceneElement
+	nextSceneId   SceneId
+	sceneElements []sceneElement
 }
 
 func NewSceneControls() SceneControls {
@@ -54,8 +52,6 @@ func (scene *SceneControls) Init(data any, window *Window) {
 		interactable: false,
 	})
 
-	/////
-
 	instruction2TextMeasured := rl.MeasureTextEx(rl.GetFontDefault(), "left-click to attack", FontSize/10, 10)
 	w = (screenWidth - instruction2TextMeasured.X) / 2
 	h = h + instructionTextMeasured.Y*1.2
@@ -66,8 +62,6 @@ func (scene *SceneControls) Init(data any, window *Window) {
 		rectangle:    rl.NewRectangle(w, h, instruction2TextMeasured.X, instruction2TextMeasured.Y),
 		interactable: false,
 	})
-
-	////
 
 	backButton := rl.MeasureTextEx(rl.GetFontDefault(), "back", FontSize/5, 10)
 	w = (screenWidth - backButton.X) / 2
@@ -81,30 +75,6 @@ func (scene *SceneControls) Init(data any, window *Window) {
 		targetScene:  Main,
 	})
 
-	// 	scene.texture = rl.LoadTexture("mouse.png")
-
-	// 	scene.colorSwapShader = rl.LoadShaderFromMemory(``, `#version 330
-	// // Input vertex attributes (from vertex shader)
-	// in vec2 fragTexCoord;
-	// in vec4 fragColor;
-
-	// // Input uniform values
-	// uniform sampler2D texture0;
-
-	// out vec4 finalColor;
-
-	// void main()
-	// {
-	// 	vec4 texelColor = texture(texture0, fragTexCoord);
-
-	//		if (texelColor == vec4(1.0, 1.0, 1.0, 1.0)) {
-	//			discard;
-	//		} else {
-	//			finalColor = vec4(1.0, 1.0, 1.0, 0.5);
-	//		}
-	//	}
-	//
-	// `)
 }
 
 func (scene *SceneControls) HandleUserInput(window *Window) {
@@ -147,47 +117,7 @@ func (scene *SceneControls) Draw(window *Window) {
 			dimWhite(uint8(dimValue)),
 		)
 	}
-
-	// mouseLeft := rl.NewVector2(
-	// 	(screenWidth/2-float32(scene.texture.Width)/2)/2,
-	// 	h+measuredSize.Y*1.2,
-	// )
-
-	// mouseRight := rl.NewVector2(
-	// 	(screenWidth/2-float32(scene.texture.Width)/2)/2+screenWidth/2,
-	// 	h+measuredSize.Y*1.2,
-	// )
-
-	// originalSize := rl.NewVector2(float32(scene.texture.Width)/2, float32(scene.texture.Height))
-	// adjustedSize := rl.NewVector2(
-	// 	(originalSize.X/originalSize.Y)*screenHeight*0.4,
-	// 	screenHeight*0.4,
-	// )
-
-	// rl.BeginShaderMode(scene.colorSwapShader)
-
-	// rl.DrawTexturePro(
-	// 	scene.texture,
-	// 	rl.NewRectangle(0, 0, originalSize.X, originalSize.Y),
-	// 	rl.NewRectangle(mouseLeft.X, mouseLeft.Y, adjustedSize.X, adjustedSize.Y),
-	// 	rl.NewVector2(0, 0),
-	// 	0,
-	// 	rl.White,
-	// )
-
-	// rl.DrawTexturePro(
-	// 	scene.texture,
-	// 	rl.NewRectangle(float32(scene.texture.Width)/2, 0, float32(scene.texture.Width)/2, float32(scene.texture.Height)),
-	// 	rl.NewRectangle(mouseRight.X, mouseRight.Y, float32(scene.texture.Width)/2, float32(scene.texture.Height)),
-	// 	rl.NewVector2(0, 0),
-	// 	0,
-	// 	rl.White,
-	// )
-
-	// rl.EndShaderMode()
 }
 
 func (scene *SceneControls) Teardown(window *Window) {
-	// rl.UnloadTexture(scene.texture)
-	// rl.UnloadShader(scene.colorSwapShader)
 }

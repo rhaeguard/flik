@@ -7,11 +7,11 @@ import (
 )
 
 type SceneTransition struct {
-	data             *Level
-	winner           Player
 	nextSceneId      SceneId
+	winner           Player
 	message          buttonRectangle
 	buttonRectangles []buttonRectangle
+	data             *Level
 }
 
 func NewSceneTransition() SceneTransition {

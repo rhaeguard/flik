@@ -5,7 +5,6 @@ import (
 )
 
 var BG_COLOR = rl.NewColor(139, 212, 195, 255)
-var STONE_COLLISION_SHARD_COLOR = rl.NewColor(255, 192, 113, 255)
 
 // magic numbers
 var VelocityDampingFactor float32
@@ -30,20 +29,16 @@ const (
 	GameInitialized   GameStatus = iota
 )
 
-type GameSettings struct{}
-
 type Game struct {
 	status       GameStatus
-	scenes       map[SceneId]Scene
-	settings     GameSettings
 	currentScene SceneId
+	scenes       [TotalSceneCount + 1]Scene
 }
 
 func NewGame() Game {
 	return Game{
-		status:   GameUninitialized,
-		scenes:   map[SceneId]Scene{},
-		settings: GameSettings{},
+		status: GameUninitialized,
+		scenes: [TotalSceneCount + 1]Scene{},
 	}
 }
 
