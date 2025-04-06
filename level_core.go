@@ -17,11 +17,13 @@ const (
 	Initialized   LevelStatus = iota
 	Stopped       LevelStatus = iota
 	Finished      LevelStatus = iota
-	// action enums
+)
+const (
 	NoAction   ActionEnum = iota
 	StoneAimed ActionEnum = iota
 	StoneHit   ActionEnum = iota
-	// player turn
+)
+const (
 	PlayerOne Player = iota
 	PlayerTwo Player = iota
 )
@@ -442,7 +444,7 @@ func (level *Level) update(window *Window) {
 		length := rl.Vector2Length(diff)
 		// make sure the length is bounded
 		length = rl.Clamp(length, 0, MaxPullLengthAllowed)
-		// the max speed we allow is 15,
+		// the max speed we allow is MaxPushVelocityAllowed,
 		// so we calculate the speed based on the distance from the selected stone
 		speed := MaxPushVelocityAllowed * (length / MaxPullLengthAllowed)
 		// normalize the diff vector
@@ -614,7 +616,7 @@ func (level *Level) handleUserInput(window *Window) {
 func (level *Level) handleMouseMove() {
 	level.setAimVectorStart(rl.GetMousePosition())
 
-	if rl.IsMouseButtonDown(rl.MouseButtonRight) && level.stonesAreStill {
+	if rl.IsMouseButtonDown(rl.MouseButtonLeft) && level.stonesAreStill && level.selectedStone == nil {
 		for i, stone := range level.stones {
 			if stone.isDead {
 				continue
@@ -628,8 +630,14 @@ func (level *Level) handleMouseMove() {
 	}
 
 	if rl.IsMouseButtonReleased(rl.MouseButtonLeft) && level.action == StoneAimed {
-		level.action = StoneHit
+		if rl.CheckCollisionPointCircle(level.aimVectorStart, level.selectedStone.pos, StoneSelectionCancelCircleRadius) {
+			level.selectedStone = nil
+			level.action = NoAction
+		} else {
+			level.action = StoneHit
+		}
 	}
+
 }
 
 func (level *Level) handleCpuMove(window *Window) {
@@ -756,7 +764,7 @@ func (level *Level) draw(window *Window) {
 
 		// draw the aim line
 		if level.action == StoneAimed {
-			rl.DrawCircleV(level.selectedStone.pos, StoneRadius*0.1, dimWhite(60))
+			rl.DrawCircleV(level.selectedStone.pos, StoneSelectionCancelCircleRadius, dimWhite(60))
 			rl.DrawLineEx(
 				level.aimVectorStart,
 				level.selectedStone.pos,

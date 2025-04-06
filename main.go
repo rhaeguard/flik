@@ -12,6 +12,7 @@ var VelocityThresholdToStop float32
 var MaxPullLengthAllowed float32
 var MaxPushVelocityAllowed float32
 var StoneRadius float32
+var StoneSelectionCancelCircleRadius float32
 var FontSize float32
 
 // shards and particles
@@ -32,13 +33,13 @@ const (
 type Game struct {
 	status       GameStatus
 	currentScene SceneId
-	scenes       [TotalSceneCount + 1]Scene
+	scenes       [TotalSceneCount]Scene
 }
 
 func NewGame() Game {
 	return Game{
 		status: GameUninitialized,
-		scenes: [TotalSceneCount + 1]Scene{},
+		scenes: [TotalSceneCount]Scene{},
 	}
 }
 
@@ -53,6 +54,7 @@ func (g *Game) Init(window *Window) {
 	MaxParticleSpeed = 0.008 * screenWidth
 	MaxShardRadius = screenWidth / 256
 	StoneRadius = screenHeight * 0.06
+	StoneSelectionCancelCircleRadius = StoneRadius * 0.2
 	FontSize = screenWidth * 0.25
 
 	// initialize the gameLevelScene
@@ -138,15 +140,16 @@ func main() {
 		fullscreen: IsFullscreen,
 		width:      1920,
 		height:     1080,
+		title:      "flik",
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
 
 	if window.fullscreen {
-		rl.InitWindow(0, 0, "flik")
+		rl.InitWindow(0, 0, window.title)
 		rl.ToggleFullscreen()
 	} else {
-		rl.InitWindow(window.width, window.height, "flik")
+		rl.InitWindow(window.width, window.height, window.title)
 	}
 
 	rl.SetTargetFPS(60)
