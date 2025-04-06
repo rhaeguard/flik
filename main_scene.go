@@ -34,18 +34,17 @@ func (scene *SceneMain) Init(data any, window *Window) {
 	screenWidth, screenHeight := window.GetScreenDimensions()
 	defaultFont := rl.GetFontDefault()
 
-	text := "...flik..."
-	measuredSize := rl.MeasureTextEx(defaultFont, text, FontSize, 10)
-	w := (screenWidth - measuredSize.X) / 2
+	text := window.title
+	measuredSize := rl.MeasureTextEx(defaultFont, text, FontSize/2, 10)
+	w := (screenWidth/2 - measuredSize.X) / 2
 	h := (screenHeight - measuredSize.Y) / 4
 
 	scene.logoText = text
-	scene.logoFontSize = FontSize
+	scene.logoFontSize = FontSize / 2
 	scene.logoBoundingBox = rl.NewRectangle(w, h, measuredSize.X, measuredSize.Y)
 
 	playText := rl.MeasureTextEx(defaultFont, "play", FontSize/5, 10)
-	w = (screenWidth - playText.X) / 2
-	h = h + measuredSize.Y*1.02 // 2% gap
+	h = h + measuredSize.Y*1.05 // 5% gap
 
 	scene.buttonRectangles = append(scene.buttonRectangles, buttonRectangle{
 		text:        "play",
@@ -55,7 +54,6 @@ func (scene *SceneMain) Init(data any, window *Window) {
 	})
 
 	controls := rl.MeasureTextEx(defaultFont, "controls", FontSize/5, 10)
-	w = (screenWidth - controls.X) / 2
 	h = h + playText.Y*1.02 // 2% gap
 
 	scene.buttonRectangles = append(scene.buttonRectangles, buttonRectangle{
@@ -66,7 +64,6 @@ func (scene *SceneMain) Init(data any, window *Window) {
 	})
 
 	quitText := rl.MeasureTextEx(defaultFont, "quit", FontSize/5, 10)
-	w = (screenWidth - quitText.X) / 2
 	h = h + playText.Y*1.02 // 2% gap
 
 	scene.buttonRectangles = append(scene.buttonRectangles, buttonRectangle{
@@ -75,6 +72,8 @@ func (scene *SceneMain) Init(data any, window *Window) {
 		fontSize:    FontSize / 5,
 		targetScene: Quit,
 	})
+
+	// initialize the game
 }
 
 func (scene *SceneMain) HandleUserInput(window *Window) {
