@@ -58,7 +58,7 @@ func (g *Game) Init(window *Window) {
 	FontSize = screenWidth * 0.25
 
 	// initialize the gameLevelScene
-	mainScene := NewSceneMain()
+	mainScene := NewSceneMain(window)
 	g.scenes[Main] = &mainScene
 
 	levelBasic := NewSceneLevelsBasic()
@@ -72,9 +72,6 @@ func (g *Game) Init(window *Window) {
 
 	gameOverScene := NewSceneTransition()
 	g.scenes[Transition] = &gameOverScene
-
-	controlsScene := NewSceneControls()
-	g.scenes[Controls] = &controlsScene
 
 	// set the init status
 	g.currentScene = Main
@@ -126,9 +123,15 @@ func (g *Game) Draw(window *Window) {
 func (g *Game) Teardown(window *Window) {
 	g.scenes[Main].Teardown(window)
 	g.scenes[LevelBasic].Teardown(window)
+	g.scenes[LevelBasic].Teardown(window)
 	g.scenes[LevelBordered].Teardown(window)
-	g.scenes[Controls].Teardown(window)
 	g.scenes[Transition].Teardown(window)
+
+	for i := range int(TotalSceneCount) {
+		if s := g.scenes[i]; s != nil {
+			s.Teardown(window)
+		}
+	}
 }
 
 func main() {

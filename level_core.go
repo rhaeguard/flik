@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -266,28 +265,28 @@ func (level *Level) resolveWallCollision(a *Stone) {
 	var collisionPoint rl.Vector2
 
 	if a.pos.X-a.radius < boundary.X {
-		pd := math.Abs(float64(a.pos.X) - float64(a.radius))
-		a.pos.X += float32(pd)
+		pd := boundary.X - (a.pos.X - a.radius)
+		a.pos.X += pd
 		a.velocity.X *= -1
 		wallCollision = true
-		collisionPoint = rl.NewVector2(0, a.pos.Y)
+		collisionPoint = rl.NewVector2(boundary.X, a.pos.Y)
 	} else if a.pos.X+a.radius > boundary.X+boundary.Width {
-		pd := math.Abs(float64(a.pos.X+a.radius) - float64(boundary.X+boundary.Width))
-		a.pos.X -= float32(pd)
+		pd := (a.pos.X + a.radius) - (boundary.X + boundary.Width)
+		a.pos.X -= pd
 		a.velocity.X *= -1
 		wallCollision = true
 		collisionPoint = rl.NewVector2(boundary.X+boundary.Width, a.pos.Y)
 	}
 
 	if a.pos.Y-a.radius < boundary.Y {
-		pd := math.Abs(float64(a.pos.Y) - float64(a.radius))
-		a.pos.Y += float32(pd)
+		pd := boundary.Y - (a.pos.Y - a.radius)
+		a.pos.Y += pd
 		a.velocity.Y *= -1
 		wallCollision = true
-		collisionPoint = rl.NewVector2(a.pos.X, 0)
+		collisionPoint = rl.NewVector2(a.pos.X, boundary.Y)
 	} else if a.pos.Y+a.radius > boundary.Y+boundary.Height {
-		pd := math.Abs(float64(a.pos.Y+a.radius) - float64(boundary.Y+boundary.Height))
-		a.pos.Y -= float32(pd)
+		pd := (a.pos.Y + a.radius) - (boundary.Y + boundary.Height)
+		a.pos.Y -= pd
 		a.velocity.Y *= -1
 		wallCollision = true
 		collisionPoint = rl.NewVector2(a.pos.X, boundary.Y+boundary.Height)
@@ -750,36 +749,32 @@ func (level *Level) drawField(window *Window) {
 	}
 }
 
-func (level *Level) draw(window *Window) {
-	{
-		level.drawField(window)
-
-		// draw the aim bubbles
-		if level.action == StoneAimed {
-			for i := float32(0.0); i <= 1.0; i += 0.1 {
-				amount := i + level.totalTimeRunning/10
-				amount = amount - float32(int(amount))
-				point := rl.Vector2Lerp(level.selectedStone.pos, level.aimVectorForwardExtensionEnd, amount)
-				rl.DrawCircleV(point, StoneRadius*0.4*(1-amount), dimWhite(50))
-			}
+func (level *Level) drawObjects() {
+	// draw the aim bubbles
+	if level.action == StoneAimed {
+		for i := float32(0.0); i <= 1.0; i += 0.1 {
+			amount := i + level.totalTimeRunning/10
+			amount = amount - float32(int(amount))
+			point := rl.Vector2Lerp(level.selectedStone.pos, level.aimVectorForwardExtensionEnd, amount)
+			rl.DrawCircleV(point, StoneRadius*0.4*(1-amount), dimWhite(50))
 		}
+	}
 
-		// draw the stones
-		for i := range level.stones {
-			stone := &(level.stones[i])
-			drawStone(stone, level)
-		}
+	// draw the stones
+	for i := range level.stones {
+		stone := &(level.stones[i])
+		drawStone(stone, level)
+	}
 
-		// draw the aim line
-		if level.action == StoneAimed {
-			rl.DrawCircleV(level.selectedStone.pos, StoneSelectionCancelCircleRadius, dimWhite(60))
-			rl.DrawLineEx(
-				level.aimVectorStart,
-				level.selectedStone.pos,
-				3.0,
-				dimWhite(60),
-			)
-		}
+	// draw the aim line
+	if level.action == StoneAimed {
+		rl.DrawCircleV(level.selectedStone.pos, StoneSelectionCancelCircleRadius, dimWhite(60))
+		rl.DrawLineEx(
+			level.aimVectorStart,
+			level.selectedStone.pos,
+			3.0,
+			dimWhite(60),
+		)
 	}
 
 	{
@@ -797,6 +792,11 @@ func (level *Level) draw(window *Window) {
 			p.render()
 		}
 	}
+}
+
+func (level *Level) draw(window *Window) {
+	level.drawField(window)
+	level.drawObjects()
 }
 
 func drawStone(s *Stone, level *Level) {
