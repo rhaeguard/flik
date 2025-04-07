@@ -51,8 +51,8 @@ func NewSceneMain(window *Window) SceneMain {
 			boundary:        bb,
 		},
 		playerSettings: [TotalPlayerCount]PlayerSettings{
-			PlayerOne: getPlayer("p1", HumanPlayerPalette1, false),
-			PlayerTwo: getPlayer("p2", CpuPlayerPalette1, false),
+			PlayerOne: getPlayer("p1", HumanPlayerPalette1, true),
+			PlayerTwo: getPlayer("p2", CpuPlayerPalette1, true),
 		},
 	}
 }
@@ -164,15 +164,21 @@ func (scene *SceneMain) Update(window *Window) (SceneId, any) {
 		scene.buttonRectangles[bi].active = buttonConfig.interactable && rl.CheckCollisionPointRec(mousePosition, buttonConfig.rectangle)
 	}
 
+	if rl.CheckCollisionPointRec(mousePosition, scene.level.levelSettings.boundary) {
+		scene.level.playerSettings[PlayerOne].isCpu = false
+		scene.level.playerSettings[PlayerTwo].isCpu = false
+	}
+
 	if scene.level.status != Stopped {
 		scene.level.update(window)
 
 		if scene.level.status == Finished {
 			// reinit
-			for ix := range scene.level.stones {
-				scene.level.stones[ix].isDead = false
-				scene.level.stones[ix].life = 100
-			}
+			scene.level.stones[0].isDead = false
+			scene.level.stones[0].life = 100
+
+			scene.level.stones[1].isDead = false
+			scene.level.stones[1].life = 100
 
 			scene.level.score[PlayerOne] = 1
 			scene.level.score[PlayerTwo] = 1
@@ -230,37 +236,6 @@ func (scene *SceneMain) Draw(window *Window) {
 			fontSpacing,
 			dimWhite(uint8(dimLevel)),
 		)
-	}
-
-	{
-		// size := rl.MeasureTextEx(rl.GetFontDefault(), "practice", FontSize/5, 10)
-
-		// rl.DrawTextEx(
-		// 	rl.GetFontDefault(), "practice",
-		// 	rl.NewVector2(
-		// 		scene.level.levelSettings.boundary.X+(scene.level.levelSettings.boundary.X-size.X)/2,
-		// 		(scene.level.levelSettings.boundary.Y-size.Y)/2,
-		// 	),
-		// 	FontSize/5,
-		// 	10,
-		// 	dimWhite(120),
-		// )
-
-		// h := (window.GetScreenBoundary().Height - scene.level.levelSettings.boundary.Y - scene.level.levelSettings.boundary.Height)
-
-		// size := rl.MeasureTextEx(rl.GetFontDefault(), GAME_INSTRUCTIONS, FontSize/12, 5)
-
-		// rl.DrawTextEx(
-		// 	rl.GetFontDefault(), GAME_INSTRUCTIONS,
-		// 	rl.NewVector2(
-		// 		scene.level.levelSettings.boundary.X+(scene.level.levelSettings.boundary.X-size.X)/2,
-		// 		scene.level.levelSettings.boundary.Y+scene.level.levelSettings.boundary.Height+(h-size.Y)/2,
-		// 	),
-		// 	FontSize/12,
-		// 	5,
-		// 	dimWhite(120),
-		// )
-
 	}
 
 }

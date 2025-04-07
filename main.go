@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "embed"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -134,6 +136,12 @@ func (g *Game) Teardown(window *Window) {
 	}
 }
 
+//go:embed bin/assets/bg.ogg
+var backgroundMusic []byte
+
+//go:embed bin/assets/icon.png
+var iconImage []byte
+
 func main() {
 	game := NewGame()
 	window := Window{
@@ -151,15 +159,31 @@ func main() {
 	} else {
 		rl.InitWindow(window.width, window.height, window.title)
 	}
+	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(60)
 
-	defer rl.CloseWindow()
+	icon := rl.LoadImageFromMemory(".png", iconImage, int32(len(iconImage)))
+	defer rl.UnloadImage(icon)
+
+	rl.SetWindowIcon(*icon)
+
+	rl.InitAudioDevice()
+	defer rl.CloseAudioDevice()
+
+	bgMusic := rl.LoadMusicStreamFromMemory(".ogg", backgroundMusic, int32(len(backgroundMusic)))
+	defer rl.UnloadMusicStream(bgMusic)
+
+	// starts playing the music
+	rl.PlayMusicStream(bgMusic)
 
 	for !rl.WindowShouldClose() {
 		if game.status == GameUninitialized {
 			(&game).Init(&window)
 		}
+
+		// loops the music
+		rl.UpdateMusicStream(bgMusic)
 
 		if game.Update(&window) != 0 {
 			break
