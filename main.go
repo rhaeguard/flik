@@ -5,7 +5,6 @@ import (
 )
 
 var BG_COLOR = rl.NewColor(139, 212, 195, 255)
-var STONE_COLLISION_SHARD_COLOR = rl.NewColor(255, 192, 113, 255)
 
 // magic numbers
 var VelocityDampingFactor float32
@@ -13,6 +12,7 @@ var VelocityThresholdToStop float32
 var MaxPullLengthAllowed float32
 var MaxPushVelocityAllowed float32
 var StoneRadius float32
+var StoneSelectionCancelCircleRadius float32
 var FontSize float32
 
 // shards and particles
@@ -30,20 +30,16 @@ const (
 	GameInitialized   GameStatus = iota
 )
 
-type GameSettings struct{}
-
 type Game struct {
 	status       GameStatus
-	scenes       map[SceneId]Scene
-	settings     GameSettings
 	currentScene SceneId
+	scenes       [TotalSceneCount]Scene
 }
 
 func NewGame() Game {
 	return Game{
-		status:   GameUninitialized,
-		scenes:   map[SceneId]Scene{},
-		settings: GameSettings{},
+		status: GameUninitialized,
+		scenes: [TotalSceneCount]Scene{},
 	}
 }
 
@@ -58,10 +54,11 @@ func (g *Game) Init(window *Window) {
 	MaxParticleSpeed = 0.008 * screenWidth
 	MaxShardRadius = screenWidth / 256
 	StoneRadius = screenHeight * 0.06
+	StoneSelectionCancelCircleRadius = StoneRadius * 0.2
 	FontSize = screenWidth * 0.25
 
 	// initialize the gameLevelScene
-	mainScene := NewSceneMain()
+	mainScene := NewSceneMain(window)
 	g.scenes[Main] = &mainScene
 
 	levelBasic := NewSceneLevelsBasic()
@@ -75,9 +72,6 @@ func (g *Game) Init(window *Window) {
 
 	gameOverScene := NewSceneTransition()
 	g.scenes[Transition] = &gameOverScene
-
-	controlsScene := NewSceneControls()
-	g.scenes[Controls] = &controlsScene
 
 	// set the init status
 	g.currentScene = Main
@@ -114,9 +108,6 @@ func (g *Game) Update(window *Window) uint8 {
 
 	if g.currentScene != nextSceneId {
 		// fmt.Printf("Scene change [%d => %d]\n", g.currentScene, nextSceneId)
-		// TODO: it is possible that if we go to the Game Over screen twice
-		// TODO: it will just append to the existing struct instance instead of creating a totally new screen
-		// TODO: this can be bad because it can result in weird errors.
 		g.scenes[nextSceneId].Init(data, window)
 		g.currentScene = nextSceneId
 	}
@@ -132,9 +123,15 @@ func (g *Game) Draw(window *Window) {
 func (g *Game) Teardown(window *Window) {
 	g.scenes[Main].Teardown(window)
 	g.scenes[LevelBasic].Teardown(window)
+	g.scenes[LevelBasic].Teardown(window)
 	g.scenes[LevelBordered].Teardown(window)
-	g.scenes[Controls].Teardown(window)
 	g.scenes[Transition].Teardown(window)
+
+	for i := range int(TotalSceneCount) {
+		if s := g.scenes[i]; s != nil {
+			s.Teardown(window)
+		}
+	}
 }
 
 func main() {
@@ -143,15 +140,16 @@ func main() {
 		fullscreen: IsFullscreen,
 		width:      1920,
 		height:     1080,
+		title:      "flik",
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
 
 	if window.fullscreen {
-		rl.InitWindow(0, 0, "flik")
+		rl.InitWindow(0, 0, window.title)
 		rl.ToggleFullscreen()
 	} else {
-		rl.InitWindow(window.width, window.height, "flik")
+		rl.InitWindow(window.width, window.height, window.title)
 	}
 
 	rl.SetTargetFPS(60)

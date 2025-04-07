@@ -2,44 +2,46 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-type LevelStatus = int8
-type ActionEnum = int8
-type Player = int8
+type LevelStatus = uint8
+type ActionEnum = uint8
+type Player = uint8
 
 const (
 	Uninitialized LevelStatus = iota
 	Initialized   LevelStatus = iota
 	Stopped       LevelStatus = iota
 	Finished      LevelStatus = iota
-	// action enums
+)
+const (
 	NoAction   ActionEnum = iota
 	StoneAimed ActionEnum = iota
 	StoneHit   ActionEnum = iota
-	// player turn
-	PlayerOne Player = iota
-	PlayerTwo Player = iota
+)
+const (
+	PlayerOne        Player = iota
+	PlayerTwo        Player = iota
+	TotalPlayerCount Player = iota
 )
 
 // level is a scene
 // it will have sublevels
 type Stone struct {
-	id       int
-	pos      rl.Vector2
-	velocity rl.Vector2
+	isDead   bool
+	id       uint8
+	playerId Player
 	mass     float32
 	radius   float32
 	life     float32
-	isDead   bool
-	playerId Player
+	pos      rl.Vector2
+	velocity rl.Vector2
 }
 
-func newStone(stoneId int, x, y float32, radius, mass float32, playerId Player) Stone {
+func newStone(stoneId uint8, x, y float32, radius, mass float32, playerId Player) Stone {
 	return Stone{
 		id:       stoneId,
 		pos:      rl.NewVector2(x, y),
@@ -53,45 +55,53 @@ func newStone(stoneId int, x, y float32, radius, mass float32, playerId Player) 
 }
 
 type PlayerSettings struct {
-	label          string
+	isCpu          bool
 	primaryColor   rl.Color
 	outerRingColor rl.Color
 	lifeColor      rl.Color
 	rocketColor    rl.Color
-	isCpu          bool
+	label          string
+}
+
+type PlayerColorPalette struct {
+	primaryColor   rl.Color
+	outerRingColor rl.Color
+	lifeColor      rl.Color
+	rocketColor    rl.Color
 }
 
 type LevelSettings struct {
-	sceneId             SceneId
-	stonesPerPlayer     uint8
 	isBordered          bool
 	isTimed             bool
+	sceneId             SceneId
+	stonesPerPlayer     uint8
 	totalSecondsAllowed uint8
-	boundary            rl.Rectangle
 	backgroundColor     rl.Color
+	boundary            rl.Rectangle
 }
 
 type Level struct {
+	stonesAreStill                 bool
+	playerTurn                     Player
 	status                         LevelStatus
-	lastTimeUpdated                float64
+	action                         ActionEnum
+	lastTimeUpdated                float32
 	totalTimeRunning               float32
-	stones                         []Stone
-	selectedStone                  *Stone
-	selectedStoneRotAnimationAngle float32
-	hitStoneMoving                 *Stone
+	selectedStoneRotAnimationAngle float32 // TODO: do we really need this?
 	aimVectorStart                 rl.Vector2
 	aimVectorForwardExtensionEnd   rl.Vector2
-	action                         ActionEnum
-	allParticles                   []Particle
-	allShards                      []Shard
-	stonesAreStill                 bool
-	score                          map[Player]uint8
-	playerTurn                     Player
-	playerSettings                 map[Player]PlayerSettings
 	levelSettings                  LevelSettings
+	selectedStone                  *Stone
+	hitStoneMoving                 *Stone
+	score                          [TotalPlayerCount]uint8
+	playerSettings                 [TotalPlayerCount]PlayerSettings
+	// collection of items
+	stones       []Stone
+	allParticles []Particle
+	allShards    []Shard
 }
 
-func newLevel(levelSettings LevelSettings, playerSettings map[Player]PlayerSettings) Level {
+func newLevel(levelSettings LevelSettings, playerSettings [TotalPlayerCount]PlayerSettings) Level {
 	playerTurn := PlayerOne
 	if rand.Float32() > 0.5 {
 		playerTurn = PlayerTwo
@@ -109,9 +119,9 @@ func newLevel(levelSettings LevelSettings, playerSettings map[Player]PlayerSetti
 		allParticles:                   []Particle{},
 		allShards:                      []Shard{},
 		stonesAreStill:                 true,
-		score: map[Player]uint8{
-			PlayerOne: 6,
-			PlayerTwo: 6,
+		score: [TotalPlayerCount]uint8{
+			PlayerOne: levelSettings.stonesPerPlayer,
+			PlayerTwo: levelSettings.stonesPerPlayer,
 		},
 		playerTurn:     playerTurn,
 		playerSettings: playerSettings,
@@ -126,16 +136,14 @@ func (level *Level) init(window *Window) {
 
 // generates a random formation of 6 stones in a 3x4 matrix
 func generateFormation(stonesPerPlayer uint8) [12]bool {
-	a := [12]bool{
-		// true, true, true, true, true, true,
-		// false, false, false, false, false, false,
-	}
+	const MAX_STONE_COUNT = 12
+	a := [MAX_STONE_COUNT]bool{}
 
 	for i := range int(stonesPerPlayer) {
 		a[i] = true
 	}
 
-	rand.Shuffle(12, func(i, j int) { a[i], a[j] = a[j], a[i] })
+	rand.Shuffle(MAX_STONE_COUNT, func(i, j int) { a[i], a[j] = a[j], a[i] })
 	return a
 }
 
@@ -147,7 +155,7 @@ func generateStones(levelSettings LevelSettings, window *Window) []Stone {
 	f1 := generateFormation(levelSettings.stonesPerPlayer)
 	f2 := generateFormation(levelSettings.stonesPerPlayer)
 
-	ids := 0
+	ids := uint8(0)
 
 	for x := 1; x <= 3; x += 1 {
 		for y := 1; y <= 4; y += 1 {
@@ -257,28 +265,28 @@ func (level *Level) resolveWallCollision(a *Stone) {
 	var collisionPoint rl.Vector2
 
 	if a.pos.X-a.radius < boundary.X {
-		pd := math.Abs(float64(a.pos.X) - float64(a.radius))
-		a.pos.X += float32(pd)
+		pd := boundary.X - (a.pos.X - a.radius)
+		a.pos.X += pd
 		a.velocity.X *= -1
 		wallCollision = true
-		collisionPoint = rl.NewVector2(0, a.pos.Y)
+		collisionPoint = rl.NewVector2(boundary.X, a.pos.Y)
 	} else if a.pos.X+a.radius > boundary.X+boundary.Width {
-		pd := math.Abs(float64(a.pos.X+a.radius) - float64(boundary.X+boundary.Width))
-		a.pos.X -= float32(pd)
+		pd := (a.pos.X + a.radius) - (boundary.X + boundary.Width)
+		a.pos.X -= pd
 		a.velocity.X *= -1
 		wallCollision = true
 		collisionPoint = rl.NewVector2(boundary.X+boundary.Width, a.pos.Y)
 	}
 
 	if a.pos.Y-a.radius < boundary.Y {
-		pd := math.Abs(float64(a.pos.Y) - float64(a.radius))
-		a.pos.Y += float32(pd)
+		pd := boundary.Y - (a.pos.Y - a.radius)
+		a.pos.Y += pd
 		a.velocity.Y *= -1
 		wallCollision = true
-		collisionPoint = rl.NewVector2(a.pos.X, 0)
+		collisionPoint = rl.NewVector2(a.pos.X, boundary.Y)
 	} else if a.pos.Y+a.radius > boundary.Y+boundary.Height {
-		pd := math.Abs(float64(a.pos.Y+a.radius) - float64(boundary.Y+boundary.Height))
-		a.pos.Y -= float32(pd)
+		pd := (a.pos.Y + a.radius) - (boundary.Y + boundary.Height)
+		a.pos.Y -= pd
 		a.velocity.Y *= -1
 		wallCollision = true
 		collisionPoint = rl.NewVector2(a.pos.X, boundary.Y+boundary.Height)
@@ -288,6 +296,8 @@ func (level *Level) resolveWallCollision(a *Stone) {
 		speedDiff := rl.Vector2Length(a.velocity)
 		amount := rl.Clamp(speedDiff, 0, MaxPushVelocityAllowed) * 2
 		a.life -= amount * 0.3 // TODO: maybe it should also depend on the angle the stone is hitting the wall
+
+		level.hitStoneMoving = nil
 
 		collisionMagnitude := 2 * speedDiff / MaxPushVelocityAllowed
 		for i := float32(0.0); i < 100; i += 0.5 {
@@ -414,7 +424,7 @@ func (level *Level) update(window *Window) {
 
 	{ // creates the shards at the position of the dead stone
 		for _, ix := range newlyDeadStonesIx {
-			stone := &level.stones[ix]
+			stone := level.stones[ix]
 
 			shardColor := level.playerSettings[stone.playerId].primaryColor
 
@@ -441,7 +451,7 @@ func (level *Level) update(window *Window) {
 		length := rl.Vector2Length(diff)
 		// make sure the length is bounded
 		length = rl.Clamp(length, 0, MaxPullLengthAllowed)
-		// the max speed we allow is 15,
+		// the max speed we allow is MaxPushVelocityAllowed,
 		// so we calculate the speed based on the distance from the selected stone
 		speed := MaxPushVelocityAllowed * (length / MaxPullLengthAllowed)
 		// normalize the diff vector
@@ -477,16 +487,15 @@ func (level *Level) update(window *Window) {
 
 			for range 25 {
 				angle := generalAngle + float32((rand.Intn(20) - 10))
-				part := NewParticle(
+
+				level.allParticles = append(level.allParticles, NewParticle(
 					stone.pos,
 					angle,
 					MaxParticleSpeed*rand.Float32(),
 					life,
 					stone.radius*1.02,
 					rocketColor,
-				)
-
-				level.allParticles = append(level.allParticles, part)
+				))
 			}
 
 			if rl.Vector2Length(stone.velocity) == 0 {
@@ -582,7 +591,7 @@ func (level *Level) update(window *Window) {
 	}
 
 	level.checkStonesForMovements()
-	level.lastTimeUpdated = rl.GetTime()
+	level.lastTimeUpdated = float32(rl.GetTime())
 	level.totalTimeRunning += rl.GetFrameTime()
 }
 
@@ -614,7 +623,7 @@ func (level *Level) handleUserInput(window *Window) {
 func (level *Level) handleMouseMove() {
 	level.setAimVectorStart(rl.GetMousePosition())
 
-	if rl.IsMouseButtonDown(rl.MouseButtonRight) && level.stonesAreStill {
+	if rl.IsMouseButtonDown(rl.MouseButtonLeft) && level.stonesAreStill && level.selectedStone == nil {
 		for i, stone := range level.stones {
 			if stone.isDead {
 				continue
@@ -628,8 +637,14 @@ func (level *Level) handleMouseMove() {
 	}
 
 	if rl.IsMouseButtonReleased(rl.MouseButtonLeft) && level.action == StoneAimed {
-		level.action = StoneHit
+		if rl.CheckCollisionPointCircle(level.aimVectorStart, level.selectedStone.pos, StoneSelectionCancelCircleRadius) {
+			level.selectedStone = nil
+			level.action = NoAction
+		} else {
+			level.action = StoneHit
+		}
 	}
+
 }
 
 func (level *Level) handleCpuMove(window *Window) {
@@ -734,36 +749,32 @@ func (level *Level) drawField(window *Window) {
 	}
 }
 
-func (level *Level) draw(window *Window) {
-	{
-		level.drawField(window)
-
-		// draw the aim bubbles
-		if level.action == StoneAimed {
-			for i := float32(0.0); i <= 1.0; i += 0.1 {
-				amount := i + level.totalTimeRunning/10
-				amount = amount - float32(int(amount))
-				point := rl.Vector2Lerp(level.selectedStone.pos, level.aimVectorForwardExtensionEnd, amount)
-				rl.DrawCircleV(point, StoneRadius*0.4*(1-amount), dimWhite(50))
-			}
+func (level *Level) drawObjects() {
+	// draw the aim bubbles
+	if level.action == StoneAimed {
+		for i := float32(0.0); i <= 1.0; i += 0.1 {
+			amount := i + level.totalTimeRunning/10
+			amount = amount - float32(int(amount))
+			point := rl.Vector2Lerp(level.selectedStone.pos, level.aimVectorForwardExtensionEnd, amount)
+			rl.DrawCircleV(point, StoneRadius*0.4*(1-amount), dimWhite(50))
 		}
+	}
 
-		// draw the stones
-		for i := range level.stones {
-			stone := &(level.stones[i])
-			drawStone(stone, level)
-		}
+	// draw the stones
+	for i := range level.stones {
+		stone := &(level.stones[i])
+		drawStone(stone, level)
+	}
 
-		// draw the aim line
-		if level.action == StoneAimed {
-			rl.DrawCircleV(level.selectedStone.pos, StoneRadius*0.1, dimWhite(60))
-			rl.DrawLineEx(
-				level.aimVectorStart,
-				level.selectedStone.pos,
-				3.0,
-				dimWhite(60),
-			)
-		}
+	// draw the aim line
+	if level.action == StoneAimed {
+		rl.DrawCircleV(level.selectedStone.pos, StoneSelectionCancelCircleRadius, dimWhite(60))
+		rl.DrawLineEx(
+			level.aimVectorStart,
+			level.selectedStone.pos,
+			3.0,
+			dimWhite(60),
+		)
 	}
 
 	{
@@ -781,6 +792,11 @@ func (level *Level) draw(window *Window) {
 			p.render()
 		}
 	}
+}
+
+func (level *Level) draw(window *Window) {
+	level.drawField(window)
+	level.drawObjects()
 }
 
 func drawStone(s *Stone, level *Level) {

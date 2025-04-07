@@ -9,14 +9,14 @@ import (
 )
 
 type Shard struct {
+	fade       bool
+	color      rl.Color
+	life       float32
+	radius     float32
 	pos        rl.Vector2
 	velocity   rl.Vector2
-	life       float32
-	color      rl.Color
-	radius     float32
-	angles     []float32
 	polyPoints []rl.Vector2
-	fade       bool
+	angles     []float32
 }
 
 func getPoint(angle float32, eRadius rl.Vector2) rl.Vector2 {

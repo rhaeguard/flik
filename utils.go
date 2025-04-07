@@ -24,3 +24,28 @@ func getLineToLineIntersectionPoint(as, ae, bs, be rl.Vector2) (rl.Vector2, bool
 func dimWhite(alpha uint8) color.RGBA {
 	return rl.NewColor(255, 255, 255, alpha)
 }
+
+var CpuPlayerPalette1 = PlayerColorPalette{
+	primaryColor:   rl.NewColor(133, 90, 92, 255),
+	outerRingColor: rl.NewColor(102, 16, 31, 255),
+	lifeColor:      rl.NewColor(255, 250, 255, 255),
+	rocketColor:    rl.NewColor(129, 13, 32, 255),
+}
+
+var HumanPlayerPalette1 = PlayerColorPalette{
+	primaryColor:   rl.NewColor(55, 113, 142, 255),
+	outerRingColor: rl.NewColor(37, 78, 112, 255),
+	lifeColor:      rl.NewColor(255, 250, 255, 255),
+	rocketColor:    rl.SkyBlue,
+}
+
+func getPlayer(label string, palette PlayerColorPalette, isCpu bool) PlayerSettings {
+	return PlayerSettings{
+		label:          label,
+		primaryColor:   palette.primaryColor,
+		outerRingColor: palette.outerRingColor,
+		lifeColor:      palette.lifeColor,
+		rocketColor:    palette.rocketColor,
+		isCpu:          isCpu,
+	}
+}

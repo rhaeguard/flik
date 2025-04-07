@@ -1,11 +1,9 @@
 package main
 
-import rl "github.com/gen2brain/raylib-go/raylib"
-
 type SceneLevelsBasic struct {
 	level          Level
 	levelSettings  LevelSettings
-	playerSettings map[Player]PlayerSettings
+	playerSettings [TotalPlayerCount]PlayerSettings
 }
 
 func NewSceneLevelsBasic() SceneLevelsBasic {
@@ -15,23 +13,9 @@ func NewSceneLevelsBasic() SceneLevelsBasic {
 			stonesPerPlayer: 6,
 			backgroundColor: BG_COLOR,
 		},
-		playerSettings: map[Player]PlayerSettings{
-			PlayerOne: {
-				label:          "you",
-				primaryColor:   rl.NewColor(55, 113, 142, 255),
-				outerRingColor: rl.NewColor(37, 78, 112, 255),
-				lifeColor:      rl.NewColor(255, 250, 255, 255),
-				rocketColor:    rl.SkyBlue,
-				isCpu:          false,
-			},
-			PlayerTwo: {
-				label:          "cpu",
-				primaryColor:   rl.NewColor(133, 90, 92, 255),
-				outerRingColor: rl.NewColor(102, 16, 31, 255),
-				lifeColor:      rl.NewColor(255, 250, 255, 255),
-				rocketColor:    rl.NewColor(129, 13, 32, 255),
-				isCpu:          true,
-			},
+		playerSettings: [TotalPlayerCount]PlayerSettings{
+			PlayerOne: getPlayer("you", HumanPlayerPalette1, false),
+			PlayerTwo: getPlayer("cpu", CpuPlayerPalette1, true),
 		},
 	}
 }

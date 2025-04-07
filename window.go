@@ -7,9 +7,10 @@ import (
 )
 
 type Window struct {
-	fullscreen bool
+	title      string
 	width      int32
 	height     int32
+	fullscreen bool
 }
 
 func (c *Window) GetScreenDimensions() (float32, float32) {
