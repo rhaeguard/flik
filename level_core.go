@@ -665,8 +665,8 @@ func (level *Level) handleCpuMove(window *Window) {
 	clampedV = rl.Vector2Negate(clampedV)
 	clampedV = rl.Vector2Add(actor.pos, clampedV)
 
-	screenBoundary := window.GetScreenBoundary()
-	boundaryLines := window.GetScreenBoundaryLines()
+	screenBoundary := level.levelSettings.boundary
+	boundaryLines := window.GetScreenBoundaryLines(screenBoundary)
 
 	if !rl.CheckCollisionPointRec(clampedV, screenBoundary) {
 		for _, line := range boundaryLines {
