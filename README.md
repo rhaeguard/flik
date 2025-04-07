@@ -33,8 +33,13 @@ go build -o bin\ -ldflags "-H=windowsgui -s -w" -tags release .
 # an exe should be generated in the bin directory 
 ```
 
+## Credits
+
+- Background music (_Sketchbook 2024-11-29_) by Abstraction ([website](https://abstractionmusic.com/), [music-loop-bundle](https://tallbeard.itch.io/music-loop-bundle)) 
+
 #### References
 
 - [vobarian - 2D collision physics article](https://www.vobarian.com/collisions/2dcollisions2.pdf)
 - [pikuma - 2D collision video](https://www.youtube.com/watch?v=1L2g4ZqmFLQ)
 - [elastic/inelastic collisions](https://www.youtube.com/watch?v=9YRgHikdcqs)
+
