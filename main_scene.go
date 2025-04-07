@@ -118,7 +118,7 @@ func (scene *SceneMain) Init(data any, window *Window) {
 	praticeText := rl.MeasureTextEx(rl.GetFontDefault(), "practice", FontSize/5, 10)
 
 	scene.buttonRectangles = append(scene.buttonRectangles, buttonRectangle{
-		text: "pratice",
+		text: "practice",
 		rectangle: rl.NewRectangle(
 			scene.level.levelSettings.boundary.X+(scene.level.levelSettings.boundary.X-praticeText.X)/2,
 			(scene.level.levelSettings.boundary.Y-praticeText.Y)/2,
