@@ -7,13 +7,13 @@
     - [x] Render center line correctly (maybe just MacOS issue?)
 - [ ] Levels!
     - [x] Bordered Mode: the stones do not leave the game, they deflect off of the borders.
-    - [ ] Time Limit Mode: the player with the most stones wins (if tie, look into life pts, proximity to the border, etc.)
+    - [x] Time Limit Mode: the player with the most stones wins (if tie, look into life pts, proximity to the border, etc.)
     - [ ] Survival Mode: try to beat as many regenerating stones as possible.
     - [ ] Dynamic Obstacles: the field will have moving elements that will cause deflections
     - [ ] Dynamic Obstacles: some stones will randomly be unplayable for a turn
 - [ ] Add sound effects
-- [ ] Better stone visuals
-- [ ] Pick an artstyle for this game
+- [x] Better stone visuals
+- [x] Pick an artstyle for this game
 - [ ] Introduce a timer for a player to make a move?
 - [ ] Music! Lofi or a bit more energetic?
 - [ ] Allow players to pick avatars and make these avatars say something when they make a good move. You can use the freely available visual novel assets on itch.io. This can also just be a character that represents the game owner or something...like Toasty! from Mortal Kombat.
