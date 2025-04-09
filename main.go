@@ -172,6 +172,7 @@ func main() {
 	defer rl.CloseAudioDevice()
 
 	bgMusic := rl.LoadMusicStreamFromMemory(".ogg", backgroundMusic, int32(len(backgroundMusic)))
+	rl.SetMusicVolume(bgMusic, 0.125)
 	defer rl.UnloadMusicStream(bgMusic)
 
 	// starts playing the music
