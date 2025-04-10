@@ -20,9 +20,9 @@
     - [ ] How to fix aiming issues on the corner?
     - [ ] Make sure CPU and the human player both have same aiming skills
 - [ ] Options screen:
-    - [ ] Allow screen resizing to predefined set of sizes
-    - [ ] Allow fullscreen
+    - [x] Allow screen resizing to predefined set of sizes
+    - [x] Allow fullscreen
+    - [x] Volume control for SFX and BG music
     - [ ] CPU level
-    - [ ] Volume control for SFX and BG music
     - [ ] Customize stones
 - [ ] Publish on itch.io
