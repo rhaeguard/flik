@@ -9,6 +9,7 @@ const (
 	LevelBordered   SceneId = iota
 	LevelTimeLimit  SceneId = iota
 	Transition      SceneId = iota
+	Options         SceneId = iota
 	Quit            SceneId = iota
 	TotalSceneCount SceneId = iota
 )
