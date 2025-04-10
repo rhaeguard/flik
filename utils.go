@@ -49,3 +49,20 @@ func getPlayer(label string, palette PlayerColorPalette, isCpu bool) PlayerSetti
 		isCpu:          isCpu,
 	}
 }
+
+func colorToInt64(color rl.Color) int64 {
+	r, g, b, a := color.RGBA()
+	// these individual colors are alpha-premultiplied
+	// where we have 2 bytes per color.
+	// (255, 0, 0, 255) is for example: 0xffff
+	// we won't utilize this alpha value, but it can be as big as the color value itself.
+	// this mask will basically get rid of the alpha byte
+	mask := uint32(0xff00)
+
+	r = (r & mask) << 16 // two bytes to the left, because red color is in 3rd byte from left (assuming 4 bytes), so it moves to the first byte
+	g = (g & mask) << 8  // a byte to the left, 3rd byte => 2nd byte
+	b = (b & mask)       // same position, the 3rd byte
+	a = (a & mask) >> 8  // move right, 3rd => 4th
+
+	return int64(r | g | b | a)
+}

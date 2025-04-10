@@ -7,10 +7,14 @@ import (
 )
 
 type Window struct {
-	title      string
-	width      int32
-	height     int32
-	fullscreen bool
+	title           string
+	width           int32
+	height          int32
+	fullscreen      bool
+	musicVolume     float32
+	sfxVolume       float32
+	maxScreenWidth  int32
+	maxScreenHeight int32
 }
 
 func (c *Window) GetScreenDimensions() (float32, float32) {

@@ -4,7 +4,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-const GAME_INSTRUCTIONS = "> Click & drag a circle to aim and charge\n> Release to attack\n> Drag back to center to cancel"
+const GAME_INSTRUCTIONS = "> Click & pull back a circle to power up\n> Release to attack\n> Drag back to center to cancel"
 
 type buttonRectangle struct {
 	text         string
@@ -104,8 +104,19 @@ func (scene *SceneMain) Init(data any, window *Window) {
 		interactable: true,
 	})
 
+	options := rl.MeasureTextEx(defaultFont, "options", FontSize/5, 10)
+	h = h + playText.Y*1.02 // 5% gap
+
+	scene.buttonRectangles = append(scene.buttonRectangles, buttonRectangle{
+		text:         "options",
+		rectangle:    rl.NewRectangle(w, h, options.X, options.Y),
+		fontSize:     FontSize / 5,
+		targetScene:  Options,
+		interactable: true,
+	})
+
 	quitText := rl.MeasureTextEx(defaultFont, "quit", FontSize/5, 10)
-	h = h + playText.Y*1.02 // 2% gap
+	h = h + options.Y*1.02 // 2% gap
 
 	scene.buttonRectangles = append(scene.buttonRectangles, buttonRectangle{
 		text:         "quit",

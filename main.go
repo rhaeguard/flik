@@ -24,6 +24,9 @@ var MaxShardRadius float32
 // default values
 var IsFullscreen bool = false
 
+// audio
+var bgMusic rl.Music
+
 type GameStatus uint8
 
 const (
@@ -75,9 +78,16 @@ func (g *Game) Init(window *Window) {
 	gameOverScene := NewSceneTransition()
 	g.scenes[Transition] = &gameOverScene
 
+	optionsScene := NewSceneOptions()
+	g.scenes[Options] = &optionsScene
+
 	// set the init status
 	g.currentScene = Main
 	g.scenes[g.currentScene].Init(nil, window)
+
+	// setup music + audio
+	rl.SetMusicVolume(bgMusic, window.musicVolume)
+
 	g.status = GameInitialized
 }
 
@@ -142,13 +152,16 @@ var backgroundMusic []byte
 //go:embed bin/assets/icon.png
 var iconImage []byte
 
+var game = NewGame()
+
 func main() {
-	game := NewGame()
 	window := Window{
-		fullscreen: IsFullscreen,
-		width:      1920,
-		height:     1080,
-		title:      "flik",
+		fullscreen:  IsFullscreen,
+		width:       1920,
+		height:      1080,
+		title:       "flik",
+		musicVolume: 0.125,
+		sfxVolume:   0.125,
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
@@ -171,12 +184,13 @@ func main() {
 	rl.InitAudioDevice()
 	defer rl.CloseAudioDevice()
 
-	bgMusic := rl.LoadMusicStreamFromMemory(".ogg", backgroundMusic, int32(len(backgroundMusic)))
-	rl.SetMusicVolume(bgMusic, 0.125)
+	bgMusic = rl.LoadMusicStreamFromMemory(".ogg", backgroundMusic, int32(len(backgroundMusic)))
 	defer rl.UnloadMusicStream(bgMusic)
 
 	// starts playing the music
 	rl.PlayMusicStream(bgMusic)
+
+	window.maxScreenWidth, window.maxScreenHeight = int32(rl.GetMonitorWidth(rl.GetCurrentMonitor())), int32(rl.GetMonitorHeight(rl.GetCurrentMonitor()))
 
 	for !rl.WindowShouldClose() {
 		if game.status == GameUninitialized {
