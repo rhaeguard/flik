@@ -29,8 +29,9 @@ go run .
 
 ```sh
 # from the root of the project
-go build -o bin\ -ldflags "-H=windowsgui -s -w" -tags release .
-# an exe should be generated in the bin directory 
+go build -o bin\ -ldflags "-H=windowsgui -s -w" -tags release . # on windows
+go build -o bin/ -ldflags "-s -w" -tags sdl . # on linux
+# an executable file should be generated in the bin directory 
 ```
 
 ## Credits
