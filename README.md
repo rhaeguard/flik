@@ -1,6 +1,6 @@
 # flik
 
-<p align="middle">See it on <a href="https://rhaeguard.itch.io/flik">rhaeguard.itch.io/flik</a>!</p>
+<p align="middle">Check it out on <a href="https://rhaeguard.itch.io/flik">rhaeguard.itch.io/flik</a>!</p>
 
 <p align="middle">
 <img src="./media/main_menu.png" width="45%"/>
