@@ -25,4 +25,4 @@
     - [x] Volume control for SFX and BG music
     - [ ] CPU level
     - [ ] Customize stones
-- [ ] Publish on itch.io
+- [x] Publish on itch.io
