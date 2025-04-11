@@ -1,8 +1,14 @@
 # flik
 
-Gameplay so far (_screen recording has some issues_)
+<p align="middle">
+<img src="./media/main_menu.png" width="45%"/>
+<img src="./media/lvl_pic_1.png" width="45%"/>
+</p>
 
-https://github.com/user-attachments/assets/62f37ef5-ee2e-40e0-b870-7527229fe023
+<p align="middle">
+<img src="./media/lvl_pic_2.png" width="45%"/>
+<img src="./media/lvl_pic_3.png" width="45%"/>
+</p>
 
 ### Idea
 
