@@ -15,7 +15,7 @@
     - [ ] Survival Mode: try to beat as many regenerating stones as possible.
     - [ ] Dynamic Obstacles: the field will have moving elements that will cause deflections
     - [ ] Dynamic Obstacles: some stones will randomly be unplayable for a turn
-- [ ] Add sound effects
+- [x] Add sound effects
 - [ ] Fix inconsistencies:
     - [ ] How to fix aiming issues on the corner?
     - [ ] Make sure CPU and the human player both have same aiming skills
