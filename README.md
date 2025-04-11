@@ -1,5 +1,7 @@
 # flik
 
+<p align="middle">See it on <a href="https://rhaeguard.itch.io/flik">rhaeguard.itch.io/flik</a>!</p>
+
 <p align="middle">
 <img src="./media/main_menu.png" width="45%"/>
 <img src="./media/lvl_pic_1.png" width="45%"/>
@@ -26,7 +28,7 @@ When me and my brother were little, we used to come up with ideas for different 
 
 On Windows:
 
-There's already a Windows executable provided in the [bin](./bin) folder. Alternatively you can build and run from the source.
+There's already Windows and Linux executable files provided in the [bin](./bin) folder. Alternatively you can build and run from the source.
 
 ```sh
 # from the root of the project
