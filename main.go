@@ -150,19 +150,19 @@ func (g *Game) Teardown(window *Window) {
 	}
 }
 
-//go:embed bin/assets/bg.ogg
+//go:embed assets/bg.ogg
 var backgroundMusic []byte
 
-//go:embed bin/assets/retro_explosion_short_15.wav
+//go:embed assets/retro_explosion_short_15.wav
 var stoneExplosionAudio []byte
 
-//go:embed bin/assets/retro_impact_metal_36.wav
+//go:embed assets/retro_impact_metal_36.wav
 var stoneToWallImpactAudio []byte
 
-//go:embed bin/assets/660768__madpancake__kill-soundimpact.ogg
+//go:embed assets/660768__madpancake__kill-soundimpact.ogg
 var stoneToStoneImpactAudio []byte
 
-//go:embed bin/assets/icon.png
+//go:embed assets/icon.png
 var iconImage []byte
 
 var game = NewGame()
