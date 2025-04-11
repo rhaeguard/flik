@@ -24,8 +24,11 @@ var MaxShardRadius float32
 // default values
 var IsFullscreen bool = false
 
-// audio
+// music + audio
 var bgMusic rl.Music
+var stoneExplosionSfx rl.Sound
+var stoneToWallImpactSfx rl.Sound
+var stoneToStoneImpactSfx rl.Sound
 
 type GameStatus uint8
 
@@ -85,8 +88,9 @@ func (g *Game) Init(window *Window) {
 	g.currentScene = Main
 	g.scenes[g.currentScene].Init(nil, window)
 
-	// setup music + audio
+	// setup music
 	rl.SetMusicVolume(bgMusic, window.musicVolume)
+	// no need to set sound volume as it is dynamically set before playing
 
 	g.status = GameInitialized
 }
@@ -149,6 +153,15 @@ func (g *Game) Teardown(window *Window) {
 //go:embed bin/assets/bg.ogg
 var backgroundMusic []byte
 
+//go:embed bin/assets/retro_explosion_short_15.wav
+var stoneExplosionAudio []byte
+
+//go:embed bin/assets/retro_impact_metal_36.wav
+var stoneToWallImpactAudio []byte
+
+//go:embed bin/assets/660768__madpancake__kill-soundimpact.ogg
+var stoneToStoneImpactAudio []byte
+
 //go:embed bin/assets/icon.png
 var iconImage []byte
 
@@ -161,7 +174,7 @@ func main() {
 		height:      1080,
 		title:       "flik",
 		musicVolume: 0.125,
-		sfxVolume:   0.125,
+		sfxVolume:   0.250,
 	}
 
 	rl.SetConfigFlags(rl.FlagMsaa4xHint)
@@ -186,6 +199,22 @@ func main() {
 
 	bgMusic = rl.LoadMusicStreamFromMemory(".ogg", backgroundMusic, int32(len(backgroundMusic)))
 	defer rl.UnloadMusicStream(bgMusic)
+
+	stoneExplosionWav := rl.LoadWaveFromMemory(".wav", stoneExplosionAudio, int32(len(stoneExplosionAudio)))
+	stoneToWallImpactWav := rl.LoadWaveFromMemory(".wav", stoneToWallImpactAudio, int32(len(stoneToWallImpactAudio)))
+	stoneToStoneImpactWav := rl.LoadWaveFromMemory(".ogg", stoneToStoneImpactAudio, int32(len(stoneToStoneImpactAudio)))
+
+	stoneExplosionSfx = rl.LoadSoundFromWave(stoneExplosionWav)
+	stoneToWallImpactSfx = rl.LoadSoundFromWave(stoneToWallImpactWav)
+	stoneToStoneImpactSfx = rl.LoadSoundFromWave(stoneToStoneImpactWav)
+
+	defer rl.UnloadWave(stoneExplosionWav)
+	defer rl.UnloadWave(stoneToWallImpactWav)
+	defer rl.UnloadWave(stoneToStoneImpactWav)
+
+	defer rl.UnloadSound(stoneExplosionSfx)
+	defer rl.UnloadSound(stoneToWallImpactSfx)
+	defer rl.UnloadSound(stoneToStoneImpactSfx)
 
 	// starts playing the music
 	rl.PlayMusicStream(bgMusic)

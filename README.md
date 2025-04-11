@@ -36,6 +36,8 @@ go build -o bin\ -ldflags "-H=windowsgui -s -w" -tags release .
 ## Credits
 
 - Background music (_Sketchbook 2024-11-29_) by Abstraction ([website](https://abstractionmusic.com/), [music-loop-bundle](https://tallbeard.itch.io/music-loop-bundle)) 
+- Kill Sound/Impact by MadPanCake -- https://freesound.org/s/660768/ -- License: Creative Commons 0
+- https://kronbits.itch.io/freesfx
 
 #### References
 

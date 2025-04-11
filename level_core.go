@@ -257,7 +257,7 @@ type collisionPair struct {
 	magnitude      float32
 }
 
-func (level *Level) resolveWallCollision(a *Stone) {
+func (level *Level) resolveWallCollision(a *Stone, window *Window) {
 	boundary := level.levelSettings.boundary
 
 	wallCollision := false
@@ -314,6 +314,7 @@ func (level *Level) resolveWallCollision(a *Stone) {
 
 			level.allShards = append(level.allShards, part)
 		}
+		PlaySound(&stoneToWallImpactSfx, collisionMagnitude/2, window.sfxVolume)
 	}
 }
 
@@ -326,8 +327,7 @@ func (level *Level) update(window *Window) {
 			if a.isDead {
 				continue
 			}
-
-			level.resolveWallCollision(a)
+			level.resolveWallCollision(a, window)
 		}
 	}
 
@@ -393,6 +393,9 @@ func (level *Level) update(window *Window) {
 
 			level.allShards = append(level.allShards, part)
 		}
+
+		// mag/2 because we double it in the impact calculations.
+		PlaySound(&stoneToStoneImpactSfx, p.magnitude/2, window.sfxVolume)
 	}
 
 	screenRect := window.GetScreenBoundary()
@@ -441,6 +444,8 @@ func (level *Level) update(window *Window) {
 
 				level.allShards = append(level.allShards, part)
 			}
+
+			PlaySound(&stoneExplosionSfx, 1, window.sfxVolume)
 		}
 	}
 

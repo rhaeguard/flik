@@ -66,3 +66,9 @@ func colorToInt64(color rl.Color) int64 {
 
 	return int64(r | g | b | a)
 }
+
+func PlaySound(sound *rl.Sound, magnitudePct float32, maxUserSetVolume float32) {
+	currentSoundVolume := maxUserSetVolume * magnitudePct
+	rl.SetSoundVolume(*sound, currentSoundVolume)
+	rl.PlaySound(*sound)
+}
